@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "scancare",
+    "slug": "scancare",
+    "version": "1.0.0",
+    "orientation": "portrait",
+  "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "logo": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "ScanCare bruger kameraet til at scanne produkt-stregkoder."
+      }
+    },
+    "android": {
+      "logo": {
+  "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "CAMERA",
+        "CAMERA"
+      ],
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.scancare"
+    },
+    "web": {
+      "logo": "./assets/logo.png"
+    }
+  }
+}
