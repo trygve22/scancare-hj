@@ -90,6 +90,67 @@ export const makeStyles = (theme) => StyleSheet.create({
     color: theme.colors.text,
     lineHeight: 20,
   },
+  reviewsCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  ratingOverview: {
+    flexDirection: 'row',
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.lg,
+  },
+  ratingLeft: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 100,
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: 2,
+    marginTop: 4,
+  },
+  ratingRight: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 4,
+  },
+  ratingBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  barBackground: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  prosConsSection: {
+    flexDirection: 'row',
+    marginTop: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  reviewItem: {
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+  },
   actionSection: {
     padding: theme.spacing.lg,
     gap: theme.spacing.md,

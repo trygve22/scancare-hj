@@ -68,66 +68,82 @@ export default function ChatBox({ style }) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.surface }, style]}>
-      <Typography variant="h3" style={{ marginBottom: 8, color: theme.colors.text }}>AI Chat</Typography>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View>
-            <FlatList
-              style={styles.list}
-              data={messages}
-              keyExtractor={(item, idx) => `${item.role}-${idx}`}
-              keyboardShouldPersistTaps='handled'
-              renderItem={({ item }) => (
-                <View style={[styles.bubble, item.role === 'user' ? styles.bubbleUser : styles.bubbleAi, { backgroundColor: item.role === 'user' ? theme.colors.primaryMuted : theme.colors.surfaceAlt }] }>
-                  <Text style={{ color: item.role === 'user' ? '#fff' : theme.colors.text }}>{item.text}</Text>
-                </View>
-              )}
-            />
-
-            {loading && <ActivityIndicator style={{ marginVertical: 6 }} color={theme.colors.primary} />}
-
-            <View style={styles.inputRow}>
-              <TextInput
-                value={text}
-                onChangeText={setText}
-                placeholder={apiKey ? 'Skriv til AI...' : 'Indtast /key YOUR_KEY for at gemme din OpenAI nøgle'}
-                placeholderTextColor={theme.colors.textMuted}
-                style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
-                multiline
-              />
-              <TouchableOpacity onPress={onPressSend} style={[styles.send, { backgroundColor: theme.colors.primary }]}> 
-                <Text style={{ color: '#fff' }}>{'Send'}</Text>
-              </TouchableOpacity>
+    <KeyboardAvoidingView 
+      style={[styles.container, { backgroundColor: theme.colors.surface }, style]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      <View style={styles.chatContainer}>
+        <FlatList
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          data={messages}
+          keyExtractor={(item, idx) => `${item.role}-${idx}`}
+          keyboardShouldPersistTaps='handled'
+          showsVerticalScrollIndicator={true}
+          renderItem={({ item }) => (
+            <View style={[styles.bubble, item.role === 'user' ? styles.bubbleUser : styles.bubbleAi, { backgroundColor: item.role === 'user' ? theme.colors.primaryMuted : theme.colors.surfaceAlt }] }>
+              <Text style={{ color: item.role === 'user' ? '#fff' : theme.colors.text }}>{item.text}</Text>
             </View>
-          </View>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
-    </View>
+          )}
+        />
+        
+        {loading && <ActivityIndicator style={{ marginVertical: 8 }} color={theme.colors.primary} />}
+      </View>
+
+      <View style={[styles.inputContainer, { borderTopColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
+        <View style={styles.inputRow}>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder={apiKey ? 'Skriv til AI...' : 'Indtast /key YOUR_KEY'}
+            placeholderTextColor={theme.colors.textMuted}
+            style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity onPress={onPressSend} style={[styles.send, { backgroundColor: theme.colors.primary }]}> 
+            <Text style={{ color: '#fff', fontWeight: '600' }}>Send</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 12,
+    flex: 1,
+  },
+  chatContainer: {
+    flex: 1,
   },
   list: {
-    maxHeight: 220,
-    marginBottom: 8,
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   bubble: {
-    padding: 10,
-    borderRadius: 8,
-    marginVertical: 6,
-    marginRight: 40,
+    padding: 12,
+    borderRadius: 16,
+    marginVertical: 4,
+    maxWidth: '80%',
   },
   bubbleUser: {
     alignSelf: 'flex-end',
+    marginLeft: '20%',
   },
   bubbleAi: {
     alignSelf: 'flex-start',
+    marginRight: '20%',
+  },
+  inputContainer: {
+    borderTopWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   inputRow: {
     flexDirection: 'row',
@@ -138,14 +154,17 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 40,
     maxHeight: 100,
-    padding: 8,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 20,
     borderWidth: 1,
+    fontSize: 16,
   },
   send: {
     paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
+    paddingHorizontal: 18,
+    borderRadius: 20,
     justifyContent: 'center',
+    minWidth: 60,
+    alignItems: 'center',
   },
 });

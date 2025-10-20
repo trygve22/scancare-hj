@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { openProductDetail } from '../utils/navigation';
+import { openProductDetail } from '../utils/navigationRef';
 import { Ionicons } from '@expo/vector-icons';
 import { makeStyles } from '../styles/SearchScreen.styles';
 import { useTheme } from '../styles/ThemeContext';

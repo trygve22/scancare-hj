@@ -47,22 +47,34 @@ npx expo start
 
 ```
 scancare/
-├── App.js                 # Navigation container + routing
+├── App.js                 # Hovedfil med providers
+├── navigation/
+│   └── AppNavigation.js   # Navigation setup (tabs + stacks)
 ├── screens/
 │   ├── HomeScreen.js       # Hovedskærm med app oversigt
 │   ├── SearchScreen.js     # Produktsøgning med FlatList
 │   ├── ReviewScreen.js     # Produktanmeldelser
 │   ├── CameraScreen.js     # Kamera scanning interface
-│   └── ProductDetailScreen.js # Detaljeret produktvisning
+│   ├── ProductDetailScreen.js # Detaljeret produktvisning
+│   ├── ChatScreen.js       # AI chat interface
+│   ├── FavoritesScreen.js  # Favorit produkter
+│   └── HistoryScreen.js    # Scan historik
 ├── components/
 │   ├── Typography.js       # Genanvendelig tekst komponent
-│   └── ErrorBoundary.js    # Fejlhåndtering
+│   ├── ErrorBoundary.js    # Fejlhåndtering
+│   └── ChatBox.js          # Chat interface komponent
 ├── styles/
 │   ├── theme.js           # Farver og design tokens
-│   ├── ThemeContext.js    # Global tema management
+│   ├── ThemeContext.js    # Global tema management (dark/light mode)
 │   └── *.styles.js        # Screen-specifikke stylesheets
+├── utils/
+│   ├── navigation.js      # Navigation helpers
+│   ├── favorites.js       # Favorit management
+│   ├── history.js         # Historik management
+│   └── openai.js          # OpenAI integration
 └── data/
-    └── moisturizers.js    # Produktdatabase
+    ├── moisturizers.js    # Produktdatabase
+    └── barcodes.js        # Stregkode database
 ```
 
 

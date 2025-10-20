@@ -5,7 +5,7 @@ import { useTheme } from '../styles/ThemeContext';
 import { getFavorites, removeFavorite } from '../utils/favorites';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { openProductDetail } from '../utils/navigation';
+import { openProductDetail } from '../utils/navigationRef';
 
 export default function FavoritesScreen({ navigation }) {
   const { theme } = useTheme();

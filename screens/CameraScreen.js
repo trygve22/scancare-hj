@@ -7,7 +7,7 @@ import Typography from '../components/Typography';
 import { moisturizerSections } from '../data/moisturizers';
 import { resolveProductByBarcode } from '../data/barcodes';
 import { addScan } from '../utils/history';
-import { openProductDetail } from '../utils/navigation';
+import { openProductDetail } from '../utils/navigationRef';
 
 export default function CameraScreen({ navigation }) {
   const { theme } = useTheme();

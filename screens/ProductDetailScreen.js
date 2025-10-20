@@ -1,11 +1,43 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { makeStyles } from '../styles/ProductDetailScreen.styles';
 import { useTheme } from '../styles/ThemeContext';
 import Typography from '../components/Typography';
 import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
+
+// Mock review data for demonstration
+const getMockReviews = (productName) => {
+	return {
+		averageRating: (Math.random() * 1.5 + 3.5).toFixed(1), // Random rating between 3.5-5.0
+		totalReviews: Math.floor(Math.random() * 500) + 50, // Random count 50-550
+		ratingDistribution: {
+			5: Math.floor(Math.random() * 40) + 40,
+			4: Math.floor(Math.random() * 30) + 20,
+			3: Math.floor(Math.random() * 15) + 5,
+			2: Math.floor(Math.random() * 10) + 2,
+			1: Math.floor(Math.random() * 5) + 1,
+		},
+		commonPros: [
+			'Meget hydrerende',
+			'Lækker tekstur',
+			'God værdi for pengene',
+			'Ingen duft',
+		],
+		commonCons: [
+			'Kan være for tyk',
+			'Tager tid at absorbere',
+			'Emballage kunne være bedre',
+		],
+		topReviews: [
+			{ user: 'Sarah K.', rating: 5, text: 'Fantastisk produkt! Min hud føles så blød og hydreret.' },
+			{ user: 'Maria L.', rating: 4, text: 'Rigtig godt produkt, men kunne ønske det absorberede hurtigere.' },
+			{ user: 'Jonas P.', rating: 5, text: 'Bedste fugtighedscreme jeg har prøvet. Anbefales!' },
+		]
+	};
+};
 
 export default function ProductDetailScreen({ route }) {
 	const navigation = useNavigation();
@@ -14,6 +46,7 @@ export default function ProductDetailScreen({ route }) {
 	const { product } = route.params || {};
 
 	const [fav, setFav] = useState(false);
+	const [reviews, setReviews] = useState(null);
 
 	useEffect(() => {
 		let mounted = true;
@@ -21,6 +54,9 @@ export default function ProductDetailScreen({ route }) {
 			if (!product) return;
 			const res = await isFavorite(product.id || `p-${product.name}`);
 			if (mounted) setFav(res);
+			// Load mock reviews
+			const mockReviews = getMockReviews(product.name);
+			if (mounted) setReviews(mockReviews);
 		})();
 		return () => { mounted = false; };
 	}, [product]);
@@ -51,11 +87,7 @@ export default function ProductDetailScreen({ route }) {
 					style={styles.backButton} 
 					onPress={() => {
 						console.log('Back button pressed');
-						if (navigation && navigation.goBack) {
-							navigation.goBack();
-						} else {
-							console.log('Navigation not available');
-						}
+						navigation.navigate('SearchMain');
 					}}
 				>
 					<Ionicons name="arrow-back" size={24} color={theme.colors.text} />
@@ -113,6 +145,118 @@ export default function ProductDetailScreen({ route }) {
 							Indeholder typisk hyaluronsyre, ceramider og andre fugtgivende ingredienser.
 						</Typography>
 					</View>
+
+					{/* Reviews Section */}
+					{reviews && (
+						<View style={styles.reviewsCard}>
+							<View style={styles.infoHeader}>
+								<Ionicons name="star" size={20} color="#FFB800" />
+								<Typography variant="h3" style={styles.infoTitle}>Anmeldelser</Typography>
+							</View>
+							
+							{/* Average Rating */}
+							<View style={styles.ratingOverview}>
+								<View style={styles.ratingLeft}>
+									<Typography variant="h1" style={{ color: theme.colors.text, fontSize: 48 }}>
+										{reviews.averageRating}
+									</Typography>
+									<View style={styles.starsRow}>
+										{[1, 2, 3, 4, 5].map((star) => (
+											<Ionicons 
+												key={star} 
+												name={star <= Math.round(reviews.averageRating) ? 'star' : 'star-outline'} 
+												size={16} 
+												color="#FFB800" 
+											/>
+										))}
+									</View>
+									<Typography variant="small" muted style={{ marginTop: 4 }}>
+										{reviews.totalReviews} anmeldelser
+									</Typography>
+								</View>
+
+								{/* Rating Distribution */}
+								<View style={styles.ratingRight}>
+									{[5, 4, 3, 2, 1].map((rating) => (
+										<View key={rating} style={styles.ratingBar}>
+											<Typography variant="small" style={{ width: 20, color: theme.colors.text }}>
+												{rating}★
+											</Typography>
+											<View style={[styles.barBackground, { backgroundColor: theme.colors.border }]}>
+												<View 
+													style={[
+														styles.barFill, 
+														{ 
+															width: `${reviews.ratingDistribution[rating]}%`,
+															backgroundColor: theme.colors.primary 
+														}
+													]} 
+												/>
+											</View>
+											<Typography variant="small" muted style={{ width: 35, textAlign: 'right' }}>
+												{reviews.ratingDistribution[rating]}%
+											</Typography>
+										</View>
+									))}
+								</View>
+							</View>
+
+							{/* Common Pros and Cons */}
+							<View style={styles.prosConsSection}>
+								<View style={{ flex: 1, marginRight: 8 }}>
+									<View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+										<Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+										<Typography variant="body" weight="600" style={{ marginLeft: 6, color: theme.colors.text }}>
+											Fordele
+										</Typography>
+									</View>
+									{reviews.commonPros.map((pro, idx) => (
+										<Typography key={idx} variant="small" style={{ color: theme.colors.text, marginBottom: 4 }}>
+											• {pro}
+										</Typography>
+									))}
+								</View>
+
+								<View style={{ flex: 1, marginLeft: 8 }}>
+									<View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+										<Ionicons name="alert-circle" size={18} color="#FF9800" />
+										<Typography variant="body" weight="600" style={{ marginLeft: 6, color: theme.colors.text }}>
+											Ulemper
+										</Typography>
+									</View>
+									{reviews.commonCons.map((con, idx) => (
+										<Typography key={idx} variant="small" style={{ color: theme.colors.text, marginBottom: 4 }}>
+											• {con}
+										</Typography>
+									))}
+								</View>
+							</View>
+
+							{/* Top Reviews */}
+							<View style={{ marginTop: 16 }}>
+								<Typography variant="body" weight="600" style={{ marginBottom: 12, color: theme.colors.text }}>
+									Top anmeldelser
+								</Typography>
+								{reviews.topReviews.map((review, idx) => (
+									<View key={idx} style={[styles.reviewItem, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+										<View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+											<Typography variant="body" weight="600" style={{ color: theme.colors.text }}>
+												{review.user}
+											</Typography>
+											<View style={{ flexDirection: 'row' }}>
+												{[...Array(review.rating)].map((_, i) => (
+													<Ionicons key={i} name="star" size={14} color="#FFB800" />
+												))}
+											</View>
+										</View>
+										<Typography variant="small" style={{ color: theme.colors.text }}>
+											{review.text}
+										</Typography>
+									</View>
+								))}
+							</View>
+						</View>
+					)}
 				</View>
 
 							{/* Action Buttons */}
