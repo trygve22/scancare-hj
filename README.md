@@ -105,8 +105,12 @@ npx expo start --clear
 
 
 
+https://github.com/user-attachments/assets/3cfe1dbc-0952-45f6-ab2c-7295b3e2c3b7
 
-https://github.com/user-attachments/assets/7b6d9386-3cb5-4184-9db5-805dd530d590
+
+
+
+
 
 
 ---
