@@ -14,10 +14,27 @@ import ProductDetailScreen from '../screens/ProductDetailScreen';
 import ChatScreen from '../screens/ChatScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 const SearchStack = createStackNavigator();
+const AuthStack = createStackNavigator();
+
+// Auth stack for login/register
+function AuthNavigator({ onLoginSuccess }) {
+  return (
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="Login">
+        {(props) => <LoginScreen {...props} onLoginSuccess={onLoginSuccess} />}
+      </AuthStack.Screen>
+      <AuthStack.Screen name="Register">
+        {(props) => <RegisterScreen {...props} />}
+      </AuthStack.Screen>
+    </AuthStack.Navigator>
+  );
+}
 
 // Main stack navigator
 function MainStack() {
@@ -105,7 +122,7 @@ function MainTabs() {
 }
 
 // Main navigation component
-export default function AppNavigation() {
+export default function AppNavigation({ isAuthenticated, onLoginSuccess }) {
   const { theme, mode } = useTheme();
 
   const navTheme = React.useMemo(() => {
@@ -126,7 +143,7 @@ export default function AppNavigation() {
 
   return (
     <NavigationContainer ref={navigationRef} theme={navTheme}>
-      <MainStack />
+      {isAuthenticated ? <MainStack /> : <AuthNavigator onLoginSuccess={onLoginSuccess} />}
     </NavigationContainer>
   );
 }
