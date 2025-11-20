@@ -48,6 +48,14 @@ export const makeStyles = (theme) => StyleSheet.create({
     justifyContent: 'center',
     marginBottom: theme.spacing.md,
   },
+  productImage: {
+    width: 160,
+    height: 160,
+    borderRadius: 12,
+    marginBottom: theme.spacing.md,
+    backgroundColor: theme.colors.surfaceAlt,
+    overflow: 'hidden',
+  },
   iconText: {
     fontSize: 32,
   },

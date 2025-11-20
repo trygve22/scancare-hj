@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import { View, FlatList, TouchableOpacity, TextInput, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { openProductDetail } from '../utils/navigationRef';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { makeStyles } from '../styles/SearchScreen.styles';
 import { useTheme } from '../styles/ThemeContext';
 import Typography from '../components/Typography';
 import { moisturizerSections } from '../data/moisturizers';
+import { brandLogos } from '../data/brandLogos';
 
 export default function SearchScreen() {
 	const navigation = useNavigation();
@@ -15,7 +16,7 @@ export default function SearchScreen() {
 	const [query, setQuery] = useState('');
 	const [selected, setSelected] = useState(null);
 
-	// Flet sektioner til en flad liste af produkter
+	// Flatten sections into product objects
 	const flatProducts = useMemo(() => {
 		return moisturizerSections.flatMap(section => 
 			section.data.map(product => ({
@@ -41,8 +42,8 @@ export default function SearchScreen() {
 
 	const navigateToDetail = () => {
 		if (selected) {
-				openProductDetail(navigation, selected);
-			}
+			openProductDetail(navigation, selected);
+		}
 	};
 
 	return (
@@ -58,6 +59,7 @@ export default function SearchScreen() {
 				autoCorrect={false}
 				clearButtonMode="while-editing"
 			/>
+
 			{selected && (
 				<View style={styles.selectedContainer}>
 					<View style={styles.selectedInfo}>
@@ -83,11 +85,16 @@ export default function SearchScreen() {
 					</TouchableOpacity>
 				</View>
 			)}
+
 			<FlatList
 				data={filtered}
 				keyExtractor={(item) => item.id}
 				renderItem={({ item }) => {
 					const isSelected = selected?.id === item.id;
+					// Extract brand name by removing leading emoji
+					const brand = (item.category || '').replace(/^[\u{1F300}-\u{1F9FF}]\s*/u, '').trim();
+					const logo = brandLogos[brand];
+
 					return (
 						<TouchableOpacity 
 							onPress={() => selectProduct(item)} 
@@ -95,12 +102,17 @@ export default function SearchScreen() {
 							activeOpacity={0.7}
 						>
 							<View style={styles.productItem}>
+								{logo ? (
+									<Image source={logo} style={styles.brandLogo} resizeMode="contain" />
+								) : null}
+
 								<View style={styles.productInfo}>
 									<Typography style={styles.itemText}>{item.name}</Typography>
 									<Typography variant="small" muted style={styles.categoryText}>
-										{item.category}
+										{item.category.replace(/^[\u{1F300}-\u{1F9FF}]\s*/u, '')}
 									</Typography>
 								</View>
+
 								<View style={styles.productActions}>
 									{isSelected ? (
 										<Ionicons name="checkmark-circle" size={24} color={theme.colors.success || theme.colors.primary} />
@@ -114,9 +126,7 @@ export default function SearchScreen() {
 						</TouchableOpacity>
 					);
 				}}
-				ListEmptyComponent={
-					<Typography muted style={styles.emptyText}>Ingen resultater</Typography>
-				}
+				ListEmptyComponent={<Typography muted style={styles.emptyText}>Ingen resultater</Typography>}
 				showsVerticalScrollIndicator={false}
 			/>
 		</View>

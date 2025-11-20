@@ -1,8 +1,8 @@
 // Centraliseret tema konfiguration (single source)
 export const lightColors = {
   mode: 'light',
-  primary: '#0a7ea4',
-  primaryMuted: '#0a7ea410',
+  primary: '#1fbe95',
+  primaryMuted: '#1fbe9510',
   background: '#ffffff',
   surface: '#ffffff',
   surfaceAlt: '#f2f2f5',
@@ -14,8 +14,8 @@ export const lightColors = {
 
 export const darkColors = {
   mode: 'dark',
-  primary: '#33b4d6',
-  primaryMuted: '#33b4d620',
+  primary: '#1fbe95',
+  primaryMuted: '#1fbe9520',
   background: '#0f1214',
   surface: '#161b1f',
   surfaceAlt: '#1f252a',

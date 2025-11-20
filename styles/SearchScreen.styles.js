@@ -73,6 +73,11 @@ export const makeStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  brandLogo: {
+    width: 48,
+    height: 24,
+    marginRight: 12,
+  },
   productInfo: {
     flex: 1,
   },

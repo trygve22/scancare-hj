@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import { makeStyles } from '../styles/ProductDetailScreen.styles';
 import { useTheme } from '../styles/ThemeContext';
 import Typography from '../components/Typography';
 import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
+import { productImages } from '../data/productImages';
 
 // Mock review data for demonstration
 const getMockReviews = (productName) => {
@@ -47,6 +48,12 @@ export default function ProductDetailScreen({ route }) {
 
 	const [fav, setFav] = useState(false);
 	const [reviews, setReviews] = useState(null);
+	const [imageUri, setImageUri] = useState(null);
+	const [imageLoading, setImageLoading] = useState(false);
+	const [imageError, setImageError] = useState(false);
+	const [imageQueries, setImageQueries] = useState([]);
+	const [imageAttemptIndex, setImageAttemptIndex] = useState(0);
+	const [useLocalPlaceholder, setUseLocalPlaceholder] = useState(false);
 
 	useEffect(() => {
 		let mounted = true;
@@ -57,6 +64,40 @@ export default function ProductDetailScreen({ route }) {
 			// Load mock reviews
 			const mockReviews = getMockReviews(product.name);
 			if (mounted) setReviews(mockReviews);
+
+			// If we have a bundled local image for this product, prefer that (offline-safe)
+			if (productImages && productImages[product.name]) {
+				if (mounted) {
+					setUseLocalPlaceholder(false);
+					setImageUri(null);
+					setImageLoading(false);
+				}
+				// local image will be rendered directly in JSX via productImages mapping
+				return;
+			}
+
+			// Set a product image URI using Unsplash Source as a lightweight demo.
+			// This returns a relevant image for the query without API keys.
+			// Build a list of progressively-fallback queries to try for Unsplash
+			const fullName = (product.name || '').trim();
+			const category = (product.category || '').replace(/^[\u{1F300}-\u{1F9FF}]/u, '').trim();
+			const brand = fullName.split(' ')[0] || '';
+			const queries = [];
+			if (fullName) queries.push(fullName);
+			if (brand && brand.toLowerCase() !== fullName.toLowerCase()) queries.push(brand);
+			if (category && category.toLowerCase() !== fullName.toLowerCase()) queries.push(category);
+			queries.push('skincare');
+			// Deduplicate and encode
+			const unique = Array.from(new Set(queries.map(q => q.trim()).filter(Boolean)));
+			if (mounted) {
+				setImageQueries(unique);
+				setImageAttemptIndex(0);
+				setImageError(false);
+				setImageLoading(true);
+				// Set first URI
+				const first = encodeURIComponent(unique[0] || 'skincare');
+				setImageUri(`https://source.unsplash.com/160x160/?${first}`);
+			}
 		})();
 		return () => { mounted = false; };
 	}, [product]);
@@ -107,9 +148,47 @@ export default function ProductDetailScreen({ route }) {
 			>
 				{/* Product Hero Section */}
 				<View style={styles.heroSection}>
-					<View style={styles.productIcon}>
-						<Typography variant="h1" style={styles.iconText}>{categoryEmoji}</Typography>
-					</View>
+					{productImages && productImages[product.name] ? (
+						<Image source={productImages[product.name]} style={styles.productImage} resizeMode="cover" />
+					) : imageUri && !imageError ? (
+						<View style={{ alignItems: 'center', justifyContent: 'center' }}>
+							<Image
+								source={{ uri: imageUri }}
+								style={styles.productImage}
+								resizeMode="cover"
+								onLoadStart={() => setImageLoading(true)}
+								onLoadEnd={() => setImageLoading(false)}
+								onError={(e) => {
+									console.warn('Product image failed to load:', imageUri, e.nativeEvent?.error || e);
+									// Try the next query in the list before giving up
+									const nextIndex = imageAttemptIndex + 1;
+									if (imageQueries && nextIndex < imageQueries.length) {
+										const next = encodeURIComponent(imageQueries[nextIndex]);
+										setImageAttemptIndex(nextIndex);
+										setImageLoading(true);
+										setImageUri(`https://source.unsplash.com/160x160/?${next}`);
+										console.log('Retrying product image with query:', imageQueries[nextIndex]);
+									} else {
+										// All attempts failed — fall back to a local placeholder image (offline-safe)
+										setImageUri(null);
+										setUseLocalPlaceholder(true);
+										setImageError(true);
+										setImageLoading(false);
+									}
+								}}
+							/>
+							{imageLoading && (
+								<ActivityIndicator style={{ position: 'absolute' }} size="small" color={theme.colors.primary} />
+							)}
+						</View>
+					) : useLocalPlaceholder ? (
+						// Use bundled local placeholder image when remote images fail or offline
+						<Image source={require('../assets/icon.png')} style={styles.productImage} resizeMode="cover" />
+					) : (
+						<View style={styles.productIcon}>
+							<Typography variant="h1" style={styles.iconText}>{categoryEmoji}</Typography>
+						</View>
+					)}
 					<Typography variant="h2" style={styles.productName}>{product.name}</Typography>
 					<Typography variant="body" muted style={styles.categoryText}>{product.category}</Typography>
 				</View>
