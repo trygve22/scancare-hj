@@ -48,13 +48,16 @@ export const makeStyles = (theme) => StyleSheet.create({
     justifyContent: 'center',
     marginBottom: theme.spacing.md,
   },
-  productImage: {
-    width: 160,
-    height: 160,
-    borderRadius: 12,
+  productImageWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: theme.spacing.md,
+    width: '100%'
+  },
+  productImage: {
+    borderRadius: 12,
     backgroundColor: theme.colors.surfaceAlt,
-    overflow: 'hidden',
+    // width/height are set dynamically from component to preserve aspect ratio
   },
   iconText: {
     fontSize: 32,

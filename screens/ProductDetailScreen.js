@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, Dimensions, TextInput } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -8,35 +9,33 @@ import { useTheme } from '../styles/ThemeContext';
 import Typography from '../components/Typography';
 import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
 import { productImages } from '../data/productImages';
+import { fetchReviewsForProduct, submitReviewForProduct } from '../utils/reviews';
+import { getMockReviewsForProduct } from '../data/mockReviews';
 
-// Mock review data for demonstration
-const getMockReviews = (productName) => {
+// Helper to derive aggregate stats from an array of review objects
+const buildAggregateFromReviews = (items) => {
+	if (!items || !items.length) {
+		return {
+			averageRating: '0.0',
+			totalReviews: 0,
+			ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+		};
+	}
+	const sum = items.reduce((acc, r) => acc + (r.rating || 0), 0);
+	const avg = (sum / items.length).toFixed(1);
+	const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+	items.forEach(r => {
+		const key = Math.round(r.rating || 0);
+		if (dist[key] != null) dist[key] += 1;
+	});
+	const distPct = {};
+	Object.keys(dist).forEach(k => {
+		distPct[k] = items.length ? Math.round((dist[k] / items.length) * 100) : 0;
+	});
 	return {
-		averageRating: (Math.random() * 1.5 + 3.5).toFixed(1), // Random rating between 3.5-5.0
-		totalReviews: Math.floor(Math.random() * 500) + 50, // Random count 50-550
-		ratingDistribution: {
-			5: Math.floor(Math.random() * 40) + 40,
-			4: Math.floor(Math.random() * 30) + 20,
-			3: Math.floor(Math.random() * 15) + 5,
-			2: Math.floor(Math.random() * 10) + 2,
-			1: Math.floor(Math.random() * 5) + 1,
-		},
-		commonPros: [
-			'Meget hydrerende',
-			'Lækker tekstur',
-			'God værdi for pengene',
-			'Ingen duft',
-		],
-		commonCons: [
-			'Kan være for tyk',
-			'Tager tid at absorbere',
-			'Emballage kunne være bedre',
-		],
-		topReviews: [
-			{ user: 'Sarah K.', rating: 5, text: 'Fantastisk produkt! Min hud føles så blød og hydreret.' },
-			{ user: 'Maria L.', rating: 4, text: 'Rigtig godt produkt, men kunne ønske det absorberede hurtigere.' },
-			{ user: 'Jonas P.', rating: 5, text: 'Bedste fugtighedscreme jeg har prøvet. Anbefales!' },
-		]
+		averageRating: avg,
+		totalReviews: items.length,
+		ratingDistribution: distPct,
 	};
 };
 
@@ -48,22 +47,59 @@ export default function ProductDetailScreen({ route }) {
 
 	const [fav, setFav] = useState(false);
 	const [reviews, setReviews] = useState(null);
+	const [userReviews, setUserReviews] = useState([]);
+	const [newRating, setNewRating] = useState(0);
+	const [newReviewText, setNewReviewText] = useState('');
+	const [submittingReview, setSubmittingReview] = useState(false);
 	const [imageUri, setImageUri] = useState(null);
 	const [imageLoading, setImageLoading] = useState(false);
 	const [imageError, setImageError] = useState(false);
+	const [imageAspect, setImageAspect] = useState(1);
 	const [imageQueries, setImageQueries] = useState([]);
 	const [imageAttemptIndex, setImageAttemptIndex] = useState(0);
 	const [useLocalPlaceholder, setUseLocalPlaceholder] = useState(false);
+	const [prefs, setPrefs] = useState(null);
+
+	// Helper to compute layout style for image given its aspect ratio
+	const getImageLayoutStyle = (aspect = 1) => {
+		const screenW = Dimensions.get('window').width;
+		const horizontalPadding = 48; // matches content padding
+		// Cap the displayed image size so it's not too large on big screens
+		const MAX_WIDTH = Math.min(320, screenW - horizontalPadding);
+		const MAX_HEIGHT = 240; // ensure tall images don't grow excessively
+		let width = Math.round(Math.min(MAX_WIDTH, screenW - horizontalPadding));
+		let height = Math.round(width / (aspect || 1));
+		if (height > MAX_HEIGHT) {
+			height = MAX_HEIGHT;
+			width = Math.round(height * (aspect || 1));
+		}
+		return { width, height };
+	};
 
 	useEffect(() => {
 		let mounted = true;
 		(async () => {
 			if (!product) return;
-			const res = await isFavorite(product.id || `p-${product.name}`);
+			const productId = product.id || `p-${product.name}`;
+			const res = await isFavorite(productId);
 			if (mounted) setFav(res);
-			// Load mock reviews
-			const mockReviews = getMockReviews(product.name);
-			if (mounted) setReviews(mockReviews);
+
+			// Load reviews from Firebase
+			try {
+				const items = await fetchReviewsForProduct(productId);
+				if (!mounted) return;
+				setUserReviews(items);
+				// Derive simple aggregate stats fra Firestore, eller fald tilbage til mock-reviews
+				if (items.length) {
+					setReviews(buildAggregateFromReviews(items));
+				} else {
+					const mockItems = getMockReviewsForProduct(product.name);
+					setUserReviews(mockItems);
+					setReviews(buildAggregateFromReviews(mockItems));
+				}
+			} catch (e) {
+				console.warn('Failed to load reviews from Firebase', e);
+			}
 
 			// If we have a bundled local image for this product, prefer that (offline-safe)
 			if (productImages && productImages[product.name]) {
@@ -102,6 +138,77 @@ export default function ProductDetailScreen({ route }) {
 		return () => { mounted = false; };
 	}, [product]);
 
+	// Compute and set aspect ratio for the currently displayed image (local or remote)
+	useEffect(() => {
+		let mounted = true;
+		const srcLocal = productImages && productImages[product.name];
+		if (srcLocal) {
+			try {
+				const resolved = Image.resolveAssetSource(srcLocal);
+				if (mounted && resolved && resolved.width && resolved.height) {
+					setImageAspect(resolved.width / resolved.height);
+				}
+			} catch (e) { /* ignore */ }
+		} else if (imageUri) {
+			// Remote image: fetch intrinsic size
+			Image.getSize(imageUri, (w, h) => {
+				if (mounted && w && h) setImageAspect(w / h);
+			}, (err) => {
+				// ignore failure to get size — keep default aspect
+				console.warn('Failed to get image size for', imageUri, err);
+			});
+		}
+		return () => { mounted = false; };
+	}, [imageUri, product]);
+
+	// Load user preferences from AsyncStorage for comparison
+	useEffect(() => {
+		let mounted = true;
+		(async () => {
+			try {
+				const skin = await AsyncStorage.getItem('SC_PROFILE_SKIN');
+				const allergiesRaw = await AsyncStorage.getItem('SC_PROFILE_ALLERGIES');
+				const brand = await AsyncStorage.getItem('SC_PROFILE_BRAND');
+				if (!mounted) return;
+				setPrefs({
+					skin: skin || null,
+					allergies: allergiesRaw ? JSON.parse(allergiesRaw) : [],
+					brand: brand || null,
+				});
+			} catch (e) {
+				console.warn('Failed to load user prefs in ProductDetailScreen', e);
+			}
+		})();
+		return () => { mounted = false; };
+	}, []);
+
+	const compatibility = useMemo(() => {
+		if (!prefs || !product) return null;
+		const { skin, allergies, brand: favBrand } = prefs;
+
+		const productSkinTypes = product.skinTypes || [];
+		const productContains = product.contains || [];
+		const productBrand = product.brand;
+
+		const matchesSkin = skin && productSkinTypes.length
+			? productSkinTypes.includes(skin)
+			: null;
+
+		const triggersAllergy = allergies && allergies.length
+			? allergies.some(a => productContains.includes(a))
+			: false;
+
+		const avoidsAllergy = allergies && allergies.length
+			? !triggersAllergy
+			: null;
+
+		const isFavoriteBrand = favBrand && productBrand
+			? favBrand === productBrand
+			: null;
+
+		return { matchesSkin, avoidsAllergy, triggersAllergy, isFavoriteBrand };
+	}, [prefs, product]);
+
 	// Removed verbose debug logs - preserve only actionable warnings
 	try {
 		// keep a light check for unexpected navigation issues
@@ -119,6 +226,35 @@ export default function ProductDetailScreen({ route }) {
 	// Extract category emoji
 	const categoryEmoji = product.category.match(/^[\u{1F300}-\u{1F9FF}]/u)?.[0] || '🧴';
 
+	const productId = product.id || `p-${product.name}`;
+
+	const handleSubmitReview = async () => {
+		if (submittingReview) return;
+		try {
+			setSubmittingReview(true);
+			const res = await submitReviewForProduct({
+				productId,
+				productName: product.name,
+				rating: newRating,
+				text: newReviewText,
+			});
+			if (!res.success) {
+				Alert.alert('Fejl', res.message || 'Kunne ikke gemme anmeldelse');
+				return;
+			}
+			Alert.alert('Tak', 'Din anmeldelse er gemt');
+			setNewRating(0);
+			setNewReviewText('');
+			// reload
+			const items = await fetchReviewsForProduct(productId);
+			setUserReviews(items);
+		} catch (e) {
+			Alert.alert('Fejl', e.message || 'Noget gik galt');
+		} finally {
+			setSubmittingReview(false);
+		}
+	};
+
 	return (
 		<SafeAreaView style={styles.container}>
 			<View style={styles.content}>
@@ -127,8 +263,12 @@ export default function ProductDetailScreen({ route }) {
 				<TouchableOpacity 
 					style={styles.backButton} 
 					onPress={() => {
-						console.log('Back button pressed');
-						navigation.navigate('SearchMain');
+						// Prefer goBack to preserve previous screen state (scroll position).
+						if (navigation && typeof navigation.goBack === 'function') {
+							navigation.goBack();
+						} else {
+							navigation.navigate && navigation.navigate('SearchMain');
+						}
 					}}
 				>
 					<Ionicons name="arrow-back" size={24} color={theme.colors.text} />
@@ -149,13 +289,15 @@ export default function ProductDetailScreen({ route }) {
 				{/* Product Hero Section */}
 				<View style={styles.heroSection}>
 					{productImages && productImages[product.name] ? (
-						<Image source={productImages[product.name]} style={styles.productImage} resizeMode="cover" />
+						<View style={styles.productImageWrapper}>
+							<Image source={productImages[product.name]} style={[styles.productImage, getImageLayoutStyle(imageAspect)]} resizeMode="contain" />
+						</View>
 					) : imageUri && !imageError ? (
-						<View style={{ alignItems: 'center', justifyContent: 'center' }}>
+						<View style={styles.productImageWrapper}>
 							<Image
 								source={{ uri: imageUri }}
-								style={styles.productImage}
-								resizeMode="cover"
+								style={[styles.productImage, getImageLayoutStyle(imageAspect)]}
+								resizeMode="contain"
 								onLoadStart={() => setImageLoading(true)}
 								onLoadEnd={() => setImageLoading(false)}
 								onError={(e) => {
@@ -166,7 +308,7 @@ export default function ProductDetailScreen({ route }) {
 										const next = encodeURIComponent(imageQueries[nextIndex]);
 										setImageAttemptIndex(nextIndex);
 										setImageLoading(true);
-										setImageUri(`https://source.unsplash.com/160x160/?${next}`);
+										setImageUri(`https://source.unsplash.com/600x600/?${next}`);
 										console.log('Retrying product image with query:', imageQueries[nextIndex]);
 									} else {
 										// All attempts failed — fall back to a local placeholder image (offline-safe)
@@ -183,7 +325,9 @@ export default function ProductDetailScreen({ route }) {
 						</View>
 					) : useLocalPlaceholder ? (
 						// Use bundled local placeholder image when remote images fail or offline
-						<Image source={require('../assets/icon.png')} style={styles.productImage} resizeMode="cover" />
+						<View style={styles.productImageWrapper}>
+							<Image source={require('../assets/icon.png')} style={[styles.productImage, getImageLayoutStyle(imageAspect)]} resizeMode="contain" />
+						</View>
 					) : (
 						<View style={styles.productIcon}>
 							<Typography variant="h1" style={styles.iconText}>{categoryEmoji}</Typography>
@@ -201,9 +345,40 @@ export default function ProductDetailScreen({ route }) {
 							<Typography variant="h3" style={styles.infoTitle}>Om Produktet</Typography>
 						</View>
 						<Typography variant="body" style={styles.infoText}>
-							Dette er en populær fugtighedscreme fra kategorien {product.category.replace(/^[\u{1F300}-\u{1F9FF}]/u, '').trim()}.
+							{product.shortDescription || `Dette er et produkt fra kategorien ${product.category.replace(/^[\u{1F300}-\u{1F9FF}]/u, '').trim()}.`}
 						</Typography>
 					</View>
+
+					{compatibility && (
+						<View style={styles.infoCard}>
+							<View style={styles.infoHeader}>
+								<Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
+								<Typography variant="h3" style={styles.infoTitle}>Match med dine præferencer</Typography>
+							</View>
+
+							{compatibility.matchesSkin !== null && (
+								<Typography variant="body" style={styles.infoText}>
+									Hudtype: {compatibility.matchesSkin ? 'Godt match til din hudtype' : 'Passer måske ikke optimalt til din hudtype'}
+								</Typography>
+							)}
+
+							{compatibility.avoidsAllergy !== null && (
+								<Typography variant="body" style={styles.infoText}>
+									Allergier: {compatibility.avoidsAllergy
+										? 'Indeholder ikke dine markerede allergier'
+										: 'OBS: Kan indeholde noget, du er følsom overfor'}
+								</Typography>
+							)}
+
+							{compatibility.isFavoriteBrand !== null && (
+								<Typography variant="body" style={styles.infoText}>
+									Brand: {compatibility.isFavoriteBrand
+										? 'Dette er et af dine yndlingsbrands'
+										: 'Ikke et af dine yndlingsbrands'}
+								</Typography>
+							)}
+						</View>
+					)}
 
 					<View style={styles.infoCard}>
 						<View style={styles.infoHeader}>
@@ -225,7 +400,7 @@ export default function ProductDetailScreen({ route }) {
 						</Typography>
 					</View>
 
-					{/* Reviews Section */}
+					{/* Reviews Section (aggregated + user reviews + input) */}
 					{reviews && (
 						<View style={styles.reviewsCard}>
 							<View style={styles.infoHeader}>
@@ -280,59 +455,89 @@ export default function ProductDetailScreen({ route }) {
 								</View>
 							</View>
 
-							{/* Common Pros and Cons */}
-							<View style={styles.prosConsSection}>
-								<View style={{ flex: 1, marginRight: 8 }}>
-									<View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-										<Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
-										<Typography variant="body" weight="600" style={{ marginLeft: 6, color: theme.colors.text }}>
-											Fordele
-										</Typography>
-									</View>
-									{reviews.commonPros.map((pro, idx) => (
-										<Typography key={idx} variant="small" style={{ color: theme.colors.text, marginBottom: 4 }}>
-											• {pro}
-										</Typography>
-									))}
-								</View>
-
-								<View style={{ flex: 1, marginLeft: 8 }}>
-									<View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-										<Ionicons name="alert-circle" size={18} color="#FF9800" />
-										<Typography variant="body" weight="600" style={{ marginLeft: 6, color: theme.colors.text }}>
-											Ulemper
-										</Typography>
-									</View>
-									{reviews.commonCons.map((con, idx) => (
-										<Typography key={idx} variant="small" style={{ color: theme.colors.text, marginBottom: 4 }}>
-											• {con}
-										</Typography>
-									))}
-								</View>
-							</View>
-
-							{/* Top Reviews */}
-							<View style={{ marginTop: 16 }}>
-								<Typography variant="body" weight="600" style={{ marginBottom: 12, color: theme.colors.text }}>
-									Top anmeldelser
-								</Typography>
-								{reviews.topReviews.map((review, idx) => (
-									<View key={idx} style={[styles.reviewItem, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
-										<View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-											<Typography variant="body" weight="600" style={{ color: theme.colors.text }}>
-												{review.user}
-											</Typography>
-											<View style={{ flexDirection: 'row' }}>
-												{[...Array(review.rating)].map((_, i) => (
-													<Ionicons key={i} name="star" size={14} color="#FFB800" />
-												))}
+							{/* Liste over brugeranmeldelser (Firebase eller mock) */}
+							{userReviews.length > 0 && (
+								<View style={{ marginTop: 16 }}>
+									<Typography variant="body" weight="600" style={{ marginBottom: 12, color: theme.colors.text }}>
+										Brugeranmeldelser
+									</Typography>
+									{userReviews.map((review, index) => (
+										<View
+											key={review.id || `${productId}-review-${index}`}
+											style={[styles.reviewItem, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}
+										>
+											<View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+												<Typography variant="body" weight="600" style={{ color: theme.colors.text }}>
+													{review.userName || 'Bruger'}
+												</Typography>
+												<View style={{ flexDirection: 'row' }}>
+													{[...Array(review.rating || 0)].map((_, i) => (
+														<Ionicons key={i} name="star" size={14} color="#FFB800" />
+													))}
+												</View>
 											</View>
+											{review.text ? (
+												<Typography variant="small" style={{ color: theme.colors.text }}>
+													{review.text}
+												</Typography>
+											) : null}
 										</View>
-										<Typography variant="small" style={{ color: theme.colors.text }}>
-											{review.text}
-										</Typography>
-									</View>
-								))}
+									))}
+								</View>
+							)}
+
+							{/* Formular til ny anmeldelse */}
+							<View style={{ marginTop: 16 }}>
+								<Typography variant="body" weight="600" style={{ marginBottom: 8, color: theme.colors.text }}>
+									Skriv din egen anmeldelse
+								</Typography>
+								<View style={{ flexDirection: 'row', marginBottom: 8 }}>
+									{[1, 2, 3, 4, 5].map(star => (
+										<TouchableOpacity
+											key={star}
+											onPress={() => setNewRating(star)}
+											style={{ marginRight: 4 }}
+										>
+											<Ionicons
+												name={star <= newRating ? 'star' : 'star-outline'}
+												size={24}
+												color="#FFB800"
+											/>
+										</TouchableOpacity>
+									))}
+								</View>
+								<TextInput
+									placeholder="Del din oplevelse med produktet"
+									value={newReviewText}
+									onChangeText={setNewReviewText}
+									style={{
+										borderWidth: 1,
+										borderColor: theme.colors.border,
+										borderRadius: 8,
+										padding: 10,
+										color: theme.colors.text,
+										minHeight: 60,
+										textAlignVertical: 'top',
+									}}
+									multiline
+								/>
+								<TouchableOpacity
+									onPress={handleSubmitReview}
+									style={{
+										marginTop: 8,
+										alignSelf: 'flex-start',
+										backgroundColor: theme.colors.primary,
+										paddingHorizontal: 16,
+										paddingVertical: 8,
+										borderRadius: 8,
+										opacity: submittingReview ? 0.6 : 1,
+									}}
+									disabled={submittingReview}
+								>
+									<Typography variant="small" weight="600" style={{ color: '#fff' }}>
+										{submittingReview ? 'Gemmer...' : 'Gem anmeldelse'}
+									</Typography>
+								</TouchableOpacity>
 							</View>
 						</View>
 					)}

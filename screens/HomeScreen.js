@@ -150,7 +150,7 @@ const local = StyleSheet.create({
     logoutButton: {
         padding: 8,
     },
-    logo: { width: 160, height: 160, marginBottom: 32 },
+    logo: { width: 200, height: 200, marginBottom: 32 },
     title: { marginBottom: 8 },
     subtitle: { textAlign: 'center', marginTop: 4 },
     button: { paddingVertical: 14, paddingHorizontal: 40, borderRadius: 8, marginBottom: 16 },

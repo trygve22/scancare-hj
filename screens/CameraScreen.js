@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../styles/ThemeContext';
 import Typography from '../components/Typography';
@@ -12,6 +13,7 @@ import { openProductDetail } from '../utils/navigationRef';
 export default function CameraScreen({ navigation }) {
   const { theme } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
+  const isFocused = useIsFocused();
   const [facing, setFacing] = useState('back');
   const [isScanning, setIsScanning] = useState(false);
   const [scannedValue, setScannedValue] = useState(null);
@@ -34,10 +36,19 @@ export default function CameraScreen({ navigation }) {
   };
 
   useEffect(() => {
+    console.log('CameraScreen mounted');
+    return () => {
+      console.log('CameraScreen unmounted');
+    };
     if (!permission) {
+      console.log('CameraScreen requesting permission...');
       requestPermission();
     }
   }, [permission, requestPermission]);
+
+  useEffect(() => {
+    console.log('CameraScreen focus change:', isFocused);
+  }, [isFocused]);
 
   const onBarcodeScanned = useCallback(({ data, type }) => {
     if (scanningRef.current) return;
@@ -118,62 +129,70 @@ export default function CameraScreen({ navigation }) {
 
   return (
     <View style={styles.cameraContainer}>
-      <CameraView 
-        style={styles.camera}
-        facing={facing}
-        ref={cameraRef}
-        barcodeScannerSettings={{
-          barcodeTypes: ['qr', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39']
-        }}
-        onBarcodeScanned={onBarcodeScanned}
-      >
-        <View style={styles.overlay}>
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => {
-                try {
-                  if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
-                    navigation.goBack();
-                  } else if (navigation) {
-                    navigation.navigate('MainTabs', { screen: 'Hjem' });
-                  }
-                } catch (e) { console.warn('Failed to handle header close:', e); }
-              }} style={styles.headerButton}>
-              <Ionicons name="close" size={30} color="white" />
-            </TouchableOpacity>
-            <Typography variant="h3" style={styles.headerTitle}>Scan Produkt</Typography>
-            <TouchableOpacity onPress={flipCamera} style={styles.headerButton}>
-              <Ionicons name="camera-reverse" size={30} color="white" />
-            </TouchableOpacity>
-          </View>
+      {isFocused ? (
+        <CameraView 
+          style={styles.camera}
+          facing={facing}
+          ref={cameraRef}
+          barcodeScannerSettings={{
+            barcodeTypes: ['qr', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code128', 'code39']
+          }}
+          onBarcodeScanned={onBarcodeScanned}
+        >
+          <View style={styles.overlay}>
 
-          {/* Scanning Frame */}
-          <View style={styles.scanFrame}>
-            <View style={styles.cornerTopLeft} />
-            <View style={styles.cornerTopRight} />
-            <View style={styles.cornerBottomLeft} />
-            <View style={styles.cornerBottomRight} />
-            <Typography variant="body" style={styles.scanText}>
-              {isScanning ? "Scannner..." : "Placer produktet i rammen"}
-            </Typography>
-          </View>
+            {/* Header */}
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => {
+                  try {
+                    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+                      navigation.goBack();
+                    } else if (navigation) {
+                      navigation.navigate('MainTabs', { screen: 'Hjem' });
+                    }
+                  } catch (e) { console.warn('Failed to handle header close:', e); }
+                }} style={styles.headerButton}>
+                <Ionicons name="close" size={30} color="white" />
+              </TouchableOpacity>
+              <Typography variant="h3" style={styles.headerTitle}>Scan Produkt</Typography>
+              <TouchableOpacity onPress={flipCamera} style={styles.headerButton}>
+                <Ionicons name="camera-reverse" size={30} color="white" />
+              </TouchableOpacity>
+            </View>
 
-          {/* Bottom Controls */}
-          <View style={styles.bottomControls}>
-            <TouchableOpacity 
-              style={[styles.scanButton, isScanning && styles.scanButtonDisabled]}
-              onPress={() => setIsScanning(false)}
-              disabled={!isScanning}
-            >
-              <Ionicons 
-                name={isScanning ? 'hourglass' : 'checkmark'}
-                size={40}
-                color="white"
-              />
-            </TouchableOpacity>
+            {/* Scanning Frame */}
+            <View style={styles.scanFrame}>
+              <View style={styles.cornerTopLeft} />
+              <View style={styles.cornerTopRight} />
+              <View style={styles.cornerBottomLeft} />
+              <View style={styles.cornerBottomRight} />
+              <Typography variant="body" style={styles.scanText}>
+                {isScanning ? "Scannner..." : "Placer produktet i rammen"}
+              </Typography>
+            </View>
+
+            {/* Bottom Controls */}
+            <View style={styles.bottomControls}>
+              <TouchableOpacity 
+                style={[styles.scanButton, isScanning && styles.scanButtonDisabled]}
+                onPress={() => setIsScanning(false)}
+                disabled={!isScanning}
+              >
+                <Ionicons 
+                  name={isScanning ? 'hourglass' : 'checkmark'}
+                  size={40}
+                  color="white"
+                />
+              </TouchableOpacity>
+            </View>
+
           </View>
+        </CameraView>
+      ) : (
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}> 
+          <Typography variant="body" style={{ color: theme.colors.text }}>Kamera er ikke aktiv (baggrund).</Typography>
         </View>
-      </CameraView>
+      )}
     </View>
   );
 }

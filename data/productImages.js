@@ -16,6 +16,13 @@ export const productImages = {
   'Creme Classic': require('../assets/products/NIVEA/CC.png'),
   'Hydra Skin Effect Day Cream': require('../assets/products/NIVEA/HSEDC.png'),
   'Cellular Epigenetics Ansigtsserum': require('../assets/products/NIVEA/CEA.png'),
+  // La Roche-Posay
+  'Toleriane Hydrating Gentle Cleanser': require('../assets/products/La Roche-Posay/ THGC.jpg.avif'),
+  'Cicaplast Baume B5+': require('../assets/products/La Roche-Posay/CBB5+.jpg.webp'),
+  'Effaclar Duo +M': require('../assets/products/La Roche-Posay/ED+M.jpg.avif'),
+  'Effaclar Purifying Foaming Gel': require('../assets/products/La Roche-Posay/EFG+M.jpg.avif'),
+  'Hydraphase Intense Serum': require('../assets/products/La Roche-Posay/HIS.jpg'),
+  'Lipikar Baume AP+M': require('../assets/products/La Roche-Posay/LBAP+M.jpg.avif'),
 };
 
 export default productImages;

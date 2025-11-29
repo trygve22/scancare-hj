@@ -24,8 +24,16 @@ export default function ChatBox({ style }) {
     setMessages((m) => [...m, { role: 'user', text: userText }]);
     setText('');
     if (!apiKey) {
-      // Ask user to paste API key directly as a message prefixed with /key 
-      setMessages((m) => [...m, { role: 'ai', text: 'Ingen API-nøgle fundet. Send din OpenAI API-nøgle med kommandoen: /key YOUR_KEY' }]);
+      setMessages((m) => [
+        ...m,
+        {
+          role: 'ai',
+          text:
+            'Chatbotten er ikke aktiveret.\n\n' +
+            'Indtast din OpenAI API key i feltet herunder.\n' +
+            'Skriv præcis: /key DIN_API_KEY_HER',
+        },
+      ]);
       return;
     }
 
@@ -96,7 +104,11 @@ export default function ChatBox({ style }) {
           <TextInput
             value={text}
             onChangeText={setText}
-            placeholder={apiKey ? 'Skriv til AI...' : 'Indtast /key YOUR_KEY'}
+            placeholder={
+              apiKey
+                ? 'Skriv til AI...'
+                : 'Indtast din API key: /key DIN_API_KEY_HER'
+            }
             placeholderTextColor={theme.colors.textMuted}
             style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
             multiline

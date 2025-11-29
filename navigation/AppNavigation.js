@@ -5,10 +5,13 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { navigationRef } from '../utils/navigationRef';
 import { useTheme } from '../styles/ThemeContext';
+import { TouchableOpacity, View, Image } from 'react-native';
+import { navigate } from '../utils/navigationRef';
 
 import HomeScreen from '../screens/HomeScreen';
 import SearchScreen from '../screens/SearchScreen';
 import ReviewScreen from '../screens/ReviewScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import CameraScreen from '../screens/CameraScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import ChatScreen from '../screens/ChatScreen';
@@ -98,25 +101,69 @@ function MainTabs() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: { 
-          backgroundColor: theme.colors.surfaceAlt || theme.colors.background, 
-          borderTopColor: theme.colors.border 
+          backgroundColor: theme.colors.primary,
+          borderTopColor: 'transparent'
         },
         tabBarIcon: ({ color, size }) => {
           let iconName = 'home';
           if (route.name === 'Hjem') iconName = 'home';
           else if (route.name === 'Søg') iconName = 'search';
           else if (route.name === 'Favoritter') iconName = 'heart';
-          else if (route.name === 'Reviews') iconName = 'chatbubbles';
+          else if (route.name === 'Profil') iconName = 'person';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textMuted,
+        tabBarLabelStyle: {
+          fontWeight: '600',
+        },
+        tabBarActiveTintColor: '#fff',
+        // Use a slightly lighter (semi-transparent white) for inactive icons
+        tabBarInactiveTintColor: 'rgba(255,255,255,0.75)',
       })}
     >
       <Tab.Screen name="Hjem" component={HomeScreen} />
       <Tab.Screen name="Søg" component={SearchStackScreen} />
+
+      {/* Central Scan button: opens the Camera screen */}
+            <Tab.Screen
+        name="Scan"
+        options={{
+          tabBarLabel: () => null,
+          tabBarIcon: () => null,
+          tabBarButton: () => (
+            <View style={{ top: -10, alignSelf: 'center', alignItems: 'center', justifyContent: 'center' }}>
+              {/* Larger primary background circle to fully cover any seam */}
+              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <TouchableOpacity
+                  onPress={() => navigate('Camera')}
+                  activeOpacity={0.8}
+                  style={{
+                    width: 62,
+                    height: 62,
+                    borderRadius: 31,
+                    backgroundColor: '#fff',
+                    borderWidth: 0,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    // Ensure flat look
+                    shadowColor: 'transparent',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0,
+                    shadowRadius: 0,
+                    elevation: 0,
+                  }}
+                >
+                  <Image source={require('../assets/logo.png')} style={{ width: 60, height: 60 }} resizeMode="contain" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ),
+        }}
+      >
+        {() => null}
+      </Tab.Screen>
+
       <Tab.Screen name="Favoritter" component={FavoritesScreen} />
-      <Tab.Screen name="Reviews" component={ReviewScreen} />
+      <Tab.Screen name="Profil" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
