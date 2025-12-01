@@ -11,6 +11,7 @@ import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
 import { productImages } from '../data/productImages';
 import { fetchReviewsForProduct, submitReviewForProduct } from '../utils/reviews';
 import { getMockReviewsForProduct } from '../data/mockReviews';
+import { brandLogos } from '../data/brandLogos';
 
 // Helper to derive aggregate stats from an array of review objects
 const buildAggregateFromReviews = (items) => {
@@ -226,6 +227,9 @@ export default function ProductDetailScreen({ route }) {
 	// Extract category emoji
 	const categoryEmoji = product.category.match(/^[\u{1F300}-\u{1F9FF}]/u)?.[0] || '🧴';
 
+	const cleanBrand = (product.brand || product.category || '').replace(/^[\u{1F300}-\u{1F9FF}]\s*/u, '').trim();
+	const brandLogo = brandLogos[cleanBrand];
+
 	const productId = product.id || `p-${product.name}`;
 
 	const handleSubmitReview = async () => {
@@ -273,7 +277,7 @@ export default function ProductDetailScreen({ route }) {
 				>
 					<Ionicons name="arrow-back" size={24} color={theme.colors.text} />
 				</TouchableOpacity>
-				<Typography variant="h3" style={styles.headerTitle}>Produkt Detaljer</Typography>
+				<Typography variant="h2" style={styles.headerTitle}>Produkt Detaljer</Typography>
 				<View style={styles.headerSpacer} />
 			</View>
 
@@ -291,6 +295,10 @@ export default function ProductDetailScreen({ route }) {
 					{productImages && productImages[product.name] ? (
 						<View style={styles.productImageWrapper}>
 							<Image source={productImages[product.name]} style={[styles.productImage, getImageLayoutStyle(imageAspect)]} resizeMode="contain" />
+						</View>
+					) : brandLogo ? (
+						<View style={styles.productImageWrapper}>
+							<Image source={brandLogo} style={[styles.productImage, getImageLayoutStyle(imageAspect)]} resizeMode="contain" />
 						</View>
 					) : imageUri && !imageError ? (
 						<View style={styles.productImageWrapper}>
@@ -334,7 +342,11 @@ export default function ProductDetailScreen({ route }) {
 						</View>
 					)}
 					<Typography variant="h2" style={styles.productName}>{product.name}</Typography>
-					<Typography variant="body" muted style={styles.categoryText}>{product.category}</Typography>
+					{brandLogo ? (
+						<Image source={brandLogo} style={styles.brandLogo} resizeMode="contain" />
+					) : (
+						<Typography variant="body" muted style={styles.categoryText}>{product.category}</Typography>
+					)}
 				</View>
 
 				{/* Product Info Cards */}

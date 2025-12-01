@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, FlatList, TouchableOpacity, TextInput, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { openProductDetail } from '../utils/navigationRef';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,10 +14,9 @@ export default function SearchScreen() {
 	const navigation = useNavigation();
 	const { theme } = useTheme();
 	const styles = useMemo(() => makeStyles(theme), [theme]);
-
 	const [query, setQuery] = useState('');
 
-	// Flatten sections into product objects (support both string and object data for safety)
+	// Flatten sections into product objects (support structured objects)
 	const flatProducts = useMemo(() => {
 		return moisturizerSections.flatMap(section => 
 			section.data.map(raw => {
@@ -27,7 +27,7 @@ export default function SearchScreen() {
 						id: `${section.title}-${raw}`
 					};
 				}
-				// new structured object format
+				// structured product object
 				return {
 					...raw,
 					category: section.title,
@@ -47,14 +47,15 @@ export default function SearchScreen() {
 	}, [query, flatProducts]);
 
 	const selectProduct = (product) => {
-		// Navigate directly to product detail when a product is pressed
+		// Gå direkte til produktdetaljer ved tryk
 		openProductDetail(navigation, product);
 	};
 
 	return (
-		<View style={styles.container}>
-			<Typography variant="h2" align="center">Søg Produkter</Typography>
-			<Typography variant="body" muted align="center">Vælg en fugtighedscreme fra listen.</Typography>
+		<SafeAreaView style={styles.container}>
+			<View style={styles.header}>
+				<Typography variant="h2" style={styles.headerTitle}>Søg Produkter</Typography>
+			</View>
 			<TextInput
 				placeholder="Søg..."
 				value={query}
@@ -65,22 +66,19 @@ export default function SearchScreen() {
 				clearButtonMode="while-editing"
 			/>
 
-            
-
 			<FlatList
 				data={filtered}
 				keyExtractor={(item) => item.id}
 				renderItem={({ item }) => {
-					// No persistent selection: each row opens details directly
-					const isSelected = false;
-					// Extract brand name by removing leading emoji
-					const brand = (item.category || '').replace(/^[\u{1F300}-\u{1F9FF}]\s*/u, '').trim();
+					// Prefer explicit brand field on the product, fallback to category
+					const rawBrand = item.brand || item.category || '';
+					const brand = rawBrand.replace(/^[\u{1F300}-\u{1F9FF}]\s*/u, '').trim();
 					const logo = brandLogos[brand];
 
 					return (
 						<TouchableOpacity 
 							onPress={() => selectProduct(item)} 
-							style={[styles.item, isSelected && styles.selectedItem]}
+							style={styles.item}
 							activeOpacity={0.7}
 						>
 							<View style={styles.productItem}>
@@ -90,6 +88,7 @@ export default function SearchScreen() {
 
 								<View style={styles.productInfo}>
 									<Typography style={styles.itemText}>{item.name}</Typography>
+									<Typography variant="small" muted style={styles.categoryText}>{brand}</Typography>
 								</View>
 
 								<View style={styles.productActions}>
@@ -102,6 +101,6 @@ export default function SearchScreen() {
 				ListEmptyComponent={<Typography muted style={styles.emptyText}>Ingen resultater</Typography>}
 				showsVerticalScrollIndicator={false}
 			/>
-		</View>
+		</SafeAreaView>
 	);
 }

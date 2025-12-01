@@ -3,15 +3,31 @@ import { StyleSheet } from 'react-native';
 export const makeStyles = (theme) => StyleSheet.create({
   container: { 
     flex: 1, 
-    padding: theme.spacing.lg, 
-    paddingTop: 60, // Extra space for status bar
+    paddingHorizontal: theme.spacing.lg,
+		paddingTop: 0,
+		paddingBottom: theme.spacing.lg,
     backgroundColor: theme.colors.background 
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  headerTitle: {
+    textAlign: 'center',
+    color: theme.colors.text,
   },
   sectionHeader: { fontSize: theme.typography.h3, fontWeight: '600', backgroundColor: theme.colors.surfaceAlt, paddingVertical: 6, paddingHorizontal: 10, borderRadius: theme.radius.md, marginTop: theme.spacing.lg, color: theme.colors.text },
   item: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border, backgroundColor: theme.colors.surface },
   itemText: { fontSize: theme.typography.body, color: theme.colors.text },
   selectedItem: { backgroundColor: theme.colors.primaryMuted },
-  searchInput: { borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceAlt, color: theme.colors.text, borderRadius: theme.radius.lg, paddingHorizontal: 12, paddingVertical: 10, marginBottom: theme.spacing.md, fontSize: theme.typography.body },
+	searchInput: { borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceAlt, color: theme.colors.text, borderRadius: theme.radius.lg, paddingHorizontal: 12, paddingVertical: 10, marginTop: theme.spacing.md, marginBottom: theme.spacing.md, fontSize: theme.typography.body },
   
   // Selected product container - ny forbedret styling
   selectedContainer: {

@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 export const makeStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60, // Extra space for status bar
+		paddingTop: 0,
     backgroundColor: theme.colors.background,
   },
   content: {
@@ -13,8 +13,8 @@ export const makeStyles = (theme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.md,
+		paddingTop: theme.spacing.md,
+		paddingBottom: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
@@ -66,6 +66,12 @@ export const makeStyles = (theme) => StyleSheet.create({
     textAlign: 'center',
     marginBottom: theme.spacing.sm,
     color: theme.colors.text,
+  },
+  brandLogo: {
+		height: 40,
+		marginTop: 8,
+		marginBottom: 8,
+    resizeMode: 'contain',
   },
   categoryText: {
     textAlign: 'center',
