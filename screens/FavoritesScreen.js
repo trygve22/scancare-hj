@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Typography from '../components/Typography';
 import { useTheme } from '../styles/ThemeContext';
 import { getFavorites, removeFavorite } from '../utils/favorites';
@@ -28,8 +29,10 @@ export default function FavoritesScreen({ navigation }) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: theme.spacing.xl }]}>
-      <Typography variant="h2" style={{ marginTop: 10 }}>Favoritter</Typography>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }] }>
+      <View style={[styles.header, { borderBottomColor: theme.colors.border }] }>
+        <Typography variant="h2" style={[styles.headerTitle, { color: theme.colors.text }]}>Favoritter</Typography>
+      </View>
       <FlatList
         data={list}
         keyExtractor={(i) => i.id}
@@ -46,8 +49,25 @@ export default function FavoritesScreen({ navigation }) {
         )}
         ListEmptyComponent={<Typography muted style={{ marginTop: 20 }}>Ingen favoritter endnu</Typography>}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({ container: { flex: 1, padding: 12 }, item: { flexDirection: 'row', padding: 12, borderRadius: 8, marginBottom: 10, alignItems: 'center' }, delete: { padding: 8 } });
+const styles = StyleSheet.create({ 
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    textAlign: 'center',
+  },
+  item: { flexDirection: 'row', padding: 12, borderRadius: 8, marginHorizontal: 12, marginBottom: 10, alignItems: 'center', backgroundColor: '#fff' },
+  delete: { padding: 8 }
+});

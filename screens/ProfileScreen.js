@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, TouchableOpacity, Alert, ScrollView, Image, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../styles/ThemeContext';
 import Typography from '../components/Typography';
@@ -67,8 +68,11 @@ export default function ProfileScreen({ navigation }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Typography variant="h2">Profil</Typography>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.header}>
+        <Typography variant="h2" style={styles.headerTitle}>Profil</Typography>
+      </View>
+      <ScrollView contentContainerStyle={styles.container}>
 
       {user ? (
         <View style={{ width: '100%', marginTop: 18 }}>
@@ -130,14 +134,34 @@ export default function ProfileScreen({ navigation }) {
       ) : (
         <Typography variant="body" muted style={{ marginTop: 24 }}>Ingen bruger logget ind</Typography>
       )}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const makeLocalStyles = (theme) => StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  headerTitle: {
+    textAlign: 'center',
+    color: theme.colors.text,
+  },
   container: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 16,
     backgroundColor: theme.colors.background,
     alignItems: 'flex-start',
   },
