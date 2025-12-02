@@ -73,6 +73,15 @@ export const makeStyles = (theme) => StyleSheet.create({
 		marginBottom: 8,
     resizeMode: 'contain',
   },
+  aiSummaryCard: {
+    marginTop: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.surfaceAlt,
+    maxWidth: '90%',
+    alignSelf: 'center',
+  },
   categoryText: {
     textAlign: 'center',
     color: theme.colors.textMuted,

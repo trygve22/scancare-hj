@@ -94,7 +94,7 @@ function SearchStackScreen({ navigation }) {
 
 // Tab navigator
 function MainTabs() {
-  const { theme } = useTheme();
+  const { theme, mode } = useTheme();
   
   return (
     <Tab.Navigator
@@ -102,7 +102,10 @@ function MainTabs() {
         headerShown: false,
         tabBarStyle: { 
           backgroundColor: theme.colors.primary,
-          borderTopColor: 'transparent'
+          borderTopColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowOpacity: 0
         },
         tabBarIcon: ({ color, size }) => {
           let iconName = 'home';
@@ -140,7 +143,7 @@ function MainTabs() {
                     width: 62,
                     height: 62,
                     borderRadius: 31,
-                    backgroundColor: '#fff',
+                    backgroundColor: mode === 'dark' ? '#000000ff' : '#fff',
                     borderWidth: 0,
                     alignItems: 'center',
                     justifyContent: 'center',

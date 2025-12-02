@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, FlatList, TouchableOpacity, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { openProductDetail } from '../utils/navigationRef';
 import { Ionicons } from '@expo/vector-icons';
 import { makeStyles } from '../styles/SearchScreen.styles';
@@ -12,6 +12,7 @@ import { brandLogos } from '../data/brandLogos';
 
 export default function SearchScreen() {
 	const navigation = useNavigation();
+	const route = useRoute();
 	const { theme } = useTheme();
 	const styles = useMemo(() => makeStyles(theme), [theme]);
 	const [query, setQuery] = useState('');
@@ -45,6 +46,20 @@ export default function SearchScreen() {
 			product.category.toLowerCase().includes(q)
 		);
 	}, [query, flatProducts]);
+
+	// Hvis vi er åbnet med et scannet produkt, så naviger
+	// videre til ProductDetail og ryd parametren, så det
+	// ikke trigges igen ved tilbage-navigation.
+	useEffect(() => {
+		const scannedProduct = route.params?.scannedProduct;
+		if (!scannedProduct) return;
+
+		// Navigér til ProductDetail med produktet
+		navigation.navigate('ProductDetail', { product: scannedProduct });
+
+		// Ryd param, så effect kun kører én gang
+		navigation.setParams && navigation.setParams({ scannedProduct: undefined });
+	}, [route.params, navigation]);
 
 	const selectProduct = (product) => {
 		// Gå direkte til produktdetaljer ved tryk

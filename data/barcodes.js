@@ -24,9 +24,27 @@ export function resolveProductByBarcode(barcode, sections) {
   if (!name) return null;
   // Find the matching product and its category from sections
   for (const section of sections || []) {
-    const hit = (section.data || []).find((p) => p.toLowerCase() === name.toLowerCase());
+    const hit = (section.data || []).find((p) => {
+      if (!p) return false;
+      if (typeof p === 'string') {
+        return p.toLowerCase() === name.toLowerCase();
+      }
+      // structured product object with name field
+      if (typeof p === 'object' && p.name) {
+        return p.name.toLowerCase() === name.toLowerCase();
+      }
+      return false;
+    });
     if (hit) {
-      return { name: hit, category: section.title, id: `${section.title}-${hit}` };
+      if (typeof hit === 'string') {
+        return { name: hit, category: section.title, id: `${section.title}-${hit}` };
+      }
+      // Preserve full product object when possible
+      return {
+        ...hit,
+        category: hit.category || section.title,
+        id: hit.id || `${section.title}-${hit.name}`,
+      };
     }
   }
   // If not found in sections, still return a basic object

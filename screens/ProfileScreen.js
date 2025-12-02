@@ -15,7 +15,7 @@ const SKIN_TYPES = ['Normal', 'Tør', 'Fedt', 'Kombineret', 'Følsom'];
 const ALLERGIES = ['Parfume', 'Parabener', 'Sulfater', 'Lanolin', 'Nikkel'];
 
 export default function ProfileScreen({ navigation }) {
-  const { theme } = useTheme();
+  const { theme, mode, toggleTheme } = useTheme();
   const styles = makeLocalStyles(theme);
 
   const [user, setUser] = useState(null);
@@ -122,7 +122,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
 
           <View style={{ height: 12 }} />
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
             <TouchableOpacity onPress={savePreferences} style={[styles.button, { backgroundColor: theme.colors.primary }]}> 
               <Typography variant="small" weight="600" style={{ color: '#fff' }}>Gem</Typography>
             </TouchableOpacity>
@@ -130,6 +130,17 @@ export default function ProfileScreen({ navigation }) {
               <Typography variant="small" weight="600">Log ud</Typography>
             </TouchableOpacity>
           </View>
+            <View style={{ height: 16 }} />
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Toggle dark mode"
+              onPress={toggleTheme}
+              style={styles.toggleButton}
+            >
+              <Typography variant="small" weight="500" style={{ color: theme.colors.text }}>
+                {mode === 'light' ? 'Skift til mørk tilstand' : 'Skift til lys tilstand'}
+              </Typography>
+            </TouchableOpacity>
         </View>
       ) : (
         <Typography variant="body" muted style={{ marginTop: 24 }}>Ingen bruger logget ind</Typography>
@@ -190,5 +201,15 @@ const makeLocalStyles = (theme) => StyleSheet.create({
   brandItem: { alignItems: 'center', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
   brandImage: { width: 48, height: 32 },
   button: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 }
+  ,
+  toggleButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignSelf: 'flex-start',
+  }
 });
 

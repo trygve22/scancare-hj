@@ -106,18 +106,6 @@ export default function HomeScreen({ navigation }) {
                 color={theme.colors.primary}
             />
             <View style={{ height: theme.spacing.lg }} />
-            <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="Toggle dark mode"
-                onPress={toggleTheme}
-                style={[local.toggleButton, { borderColor: theme.colors.border, backgroundColor: theme.colors.card }]}
-            >
-                <Typography variant="small" weight="500" style={{ color: theme.colors.text }}>
-                    {mode === 'light' ? 'Skift til mørk tilstand' : 'Skift til lys tilstand'}
-                </Typography>
-            </TouchableOpacity>
-            
-            <View style={{ height: theme.spacing.lg }} />
             <TouchableOpacity style={[local.button, { backgroundColor: theme.colors.primary }]} onPress={() => safeNavigate('Chat')}>
                 <Typography variant="small" weight="600" style={local.buttonText}>Chat med AI</Typography>
             </TouchableOpacity>

@@ -8,7 +8,7 @@ import Typography from '../components/Typography';
 import { moisturizerSections } from '../data/moisturizers';
 import { resolveProductByBarcode } from '../data/barcodes';
 import { addScan } from '../utils/history';
-import { openProductDetail } from '../utils/navigationRef';
+import { navigationRef } from '../utils/navigationRef';
 
 export default function CameraScreen({ navigation }) {
   const { theme } = useTheme();
@@ -59,10 +59,21 @@ export default function CameraScreen({ navigation }) {
     const product = resolveProductByBarcode(data, moisturizerSections);
     if (product) {
       try {
-        // Use helper to open product detail robustly (keeps tabs visible)
-        openProductDetail(navigation, product);
-        // gem i historik
-        addScan({ barcode: data, name: product.name, category: product.category, found: true });
+      // Navigér altid først til Søg-tabben med SearchMain,
+      // og lad SearchScreen selv åbne ProductDetail.
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('MainTabs', {
+          screen: 'Søg',
+          params: { screen: 'SearchMain', params: { scannedProduct: product } },
+        });
+      } else if (navigation && typeof navigation.navigate === 'function') {
+        navigation.navigate('MainTabs', {
+          screen: 'Søg',
+          params: { screen: 'SearchMain', params: { scannedProduct: product } },
+        });
+      }
+      // gem i historik
+      addScan({ barcode: data, name: product.name, category: product.category, found: true });
       } catch (e) {
         console.warn('Navigation failed after scanning:', e);
       }

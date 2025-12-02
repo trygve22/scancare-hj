@@ -4,8 +4,8 @@ export const makeStyles = (theme) => StyleSheet.create({
   container: { 
     flex: 1, 
     paddingHorizontal: theme.spacing.lg,
-		paddingTop: 0,
-		paddingBottom: theme.spacing.lg,
+    paddingTop: 0,
+    paddingBottom: 0,
     backgroundColor: theme.colors.background 
   },
   header: {

@@ -17,6 +17,18 @@ export async function getHistory() {
   }
 }
 
+// Check if user has previously scanned a product with the given name
+export async function hasScannedProduct(productName) {
+  if (!productName) return false;
+  try {
+    const list = await getHistory();
+    return list.some((entry) => entry.name === productName && entry.found);
+  } catch (e) {
+    console.error('Failed to check scanned product history', e);
+    return false;
+  }
+}
+
 export async function addScan(entry) {
   try {
     const list = await getHistory();

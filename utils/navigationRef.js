@@ -10,24 +10,27 @@ export function navigate(name, params) {
 
 // Helper function to open product detail screen
 export function openProductDetail(navigation, product) {
-  // Prefer using the provided navigation instance so we push onto the
-  // current stack (this preserves the Search screen state/scroll position).
-  if (navigation && typeof navigation.navigate === 'function') {
-    try {
-      navigation.navigate('ProductDetail', { product });
-      return;
-    } catch (e) {
-      // Fall through to global navigation ref if local navigation fails
-      console.warn('openProductDetail: local navigation failed, falling back to global ref', e);
-    }
-  }
-
-  // Fallback: use the global navigation ref to target the nested Search stack.
+  // Always target the nested Search stack where ProductDetail lives.
+  // This avoids "NAVIGATE not handled" when called from Camera/MainStack.
   if (navigationRef.isReady()) {
     navigationRef.navigate('MainTabs', {
       screen: 'Søg',
-      params: { screen: 'ProductDetail', params: { product } },
+      params: {
+        screen: 'ProductDetail',
+        params: { product },
+      },
     });
+    return;
+  }
+
+  // If for some reason the global ref is not ready yet, fall back to
+  // the local navigation object (works when already inside SearchStack).
+  if (navigation && typeof navigation.navigate === 'function') {
+    try {
+      navigation.navigate('ProductDetail', { product });
+    } catch (e) {
+      console.warn('openProductDetail: navigation failed and ref not ready', e);
+    }
   }
 }
 

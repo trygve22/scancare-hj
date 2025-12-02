@@ -9,9 +9,12 @@ import { useTheme } from '../styles/ThemeContext';
 import Typography from '../components/Typography';
 import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
 import { productImages } from '../data/productImages';
-import { fetchReviewsForProduct, submitReviewForProduct } from '../utils/reviews';
+import { fetchReviewsForProduct, submitReviewForProduct, deleteReview } from '../utils/reviews';
 import { getMockReviewsForProduct } from '../data/mockReviews';
 import { brandLogos } from '../data/brandLogos';
+import { hasScannedProduct } from '../utils/history';
+import { navigationRef } from '../utils/navigationRef';
+import { getApiKey, callOpenAI } from '../utils/openai';
 
 // Helper to derive aggregate stats from an array of review objects
 const buildAggregateFromReviews = (items) => {
@@ -60,6 +63,10 @@ export default function ProductDetailScreen({ route }) {
 	const [imageAttemptIndex, setImageAttemptIndex] = useState(0);
 	const [useLocalPlaceholder, setUseLocalPlaceholder] = useState(false);
 	const [prefs, setPrefs] = useState(null);
+	const [productSummary, setProductSummary] = useState(null);
+	const [productSummaryLoading, setProductSummaryLoading] = useState(false);
+	const [canReview, setCanReview] = useState(false);
+	const [currentUserId, setCurrentUserId] = useState(null);
 
 	// Helper to compute layout style for image given its aspect ratio
 	const getImageLayoutStyle = (aspect = 1) => {
@@ -162,6 +169,32 @@ export default function ProductDetailScreen({ route }) {
 		return () => { mounted = false; };
 	}, [imageUri, product]);
 
+	// Ask AI for a short one-liner summary of the product
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			if (!product) return;
+			try {
+				setProductSummaryLoading(true);
+				const apiKey = await getApiKey();
+				if (!apiKey) {
+					setProductSummaryLoading(false);
+					return;
+				}
+				const prompt = `Giv en kort, venlig one-liner (maks 25 ord) der beskriver dette hudplejeprodukt til en dansk forbruger. Inkludér gerne hudtype/brugsscenarie hvis det er tydeligt. Produktnavn: "${product.name}". Brand: "${product.brand || ''}". Beskrivelse: "${product.shortDescription || ''}"`;
+				const reply = await callOpenAI(prompt, apiKey);
+				if (!cancelled) setProductSummary(reply);
+			} catch (e) {
+				console.warn('Failed to fetch AI product summary', e);
+			} finally {
+				if (!cancelled) setProductSummaryLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [product]);
+
 	// Load user preferences from AsyncStorage for comparison
 	useEffect(() => {
 		let mounted = true;
@@ -182,6 +215,41 @@ export default function ProductDetailScreen({ route }) {
 		})();
 		return () => { mounted = false; };
 	}, []);
+
+	// Load current user id so we know which reviews are ours
+	useEffect(() => {
+		let mounted = true;
+		(async () => {
+			try {
+				const stored = await AsyncStorage.getItem('SCANCARE_CURRENT_USER');
+				if (!mounted) return;
+				if (stored) {
+					const parsed = JSON.parse(stored);
+					setCurrentUserId(parsed?.id || null);
+				}
+			} catch (e) {
+				console.warn('Failed to load current user for reviews', e);
+			}
+		})();
+		return () => { mounted = false; };
+	}, []);
+
+	// Check if user has scanned this product before enabling review form
+	useEffect(() => {
+		let mounted = true;
+		(async () => {
+			if (!product || !product.name) return;
+			try {
+				const scanned = await hasScannedProduct(product.name);
+				if (mounted) setCanReview(scanned);
+			} catch (e) {
+				console.warn('Failed to check scan history for product', e);
+			}
+		})();
+		return () => {
+			mounted = false;
+		};
+	}, [product]);
 
 	const compatibility = useMemo(() => {
 		if (!prefs || !product) return null;
@@ -233,6 +301,10 @@ export default function ProductDetailScreen({ route }) {
 	const productId = product.id || `p-${product.name}`;
 
 	const handleSubmitReview = async () => {
+		if (!canReview) {
+			Alert.alert('Scan påkrævet', 'Du skal først scanne produktets stregkode, før du kan skrive en anmeldelse.');
+			return;
+		}
 		if (submittingReview) return;
 		try {
 			setSubmittingReview(true);
@@ -259,19 +331,70 @@ export default function ProductDetailScreen({ route }) {
 		}
 	};
 
+	const handleDeleteReview = async (review) => {
+		try {
+			Alert.alert(
+				'Slet anmeldelse',
+				'Er du sikker på, at du vil slette din anmeldelse?',
+				[
+					{ text: 'Annuller', style: 'cancel' },
+					{
+						text: 'Slet',
+						style: 'destructive',
+						onPress: async () => {
+							try {
+								const res = await deleteReview(review.id, review.userId);
+								if (!res.success) {
+									Alert.alert('Fejl', res.message || 'Kunne ikke slette anmeldelse');
+									return;
+								}
+								// Fjern lokalt fra listen uden at reloade alt
+								setUserReviews(prev => prev.filter(r => r.id !== review.id));
+							} catch (e) {
+								Alert.alert('Fejl', e.message || 'Noget gik galt ved sletning');
+							}
+						},
+					},
+				]
+			);
+		} catch (e) {
+			Alert.alert('Fejl', e.message || 'Noget gik galt ved sletning');
+		}
+	};
+
 	return (
 		<SafeAreaView style={styles.container}>
 			<View style={styles.content}>
 			{/* Header with back button */}
 			<View style={styles.header}>
-				<TouchableOpacity 
-					style={styles.backButton} 
+				<TouchableOpacity
+					style={styles.backButton}
 					onPress={() => {
-						// Prefer goBack to preserve previous screen state (scroll position).
-						if (navigation && typeof navigation.goBack === 'function') {
-							navigation.goBack();
-						} else {
-							navigation.navigate && navigation.navigate('SearchMain');
+						// Hvis vi har en historik at gå tilbage i i SearchStack,
+						// så brug goBack (korrekt iOS-swipe fra venstre).
+						// Ellers: gå eksplicit til Søg -> SearchMain via global ref.
+						try {
+							const state = navigation.getState?.();
+							const routes = state?.routes || [];
+							const currentRoute = routes[state?.index ?? routes.length - 1];
+							// Hvis vi tidligere har været på SearchMain i denne stack, så goBack
+							const hasSearchMainInStack = routes.some(r => r.name === 'SearchMain');
+							if (hasSearchMainInStack && typeof navigation.goBack === 'function') {
+								navigation.goBack();
+								return;
+							}
+						} catch (e) {
+							// ignore and fall through to global navigation
+						}
+
+						// Fallback: nulstil til Søg -> SearchMain
+						if (navigationRef.isReady()) {
+							navigationRef.navigate('MainTabs', {
+								screen: 'Søg',
+								params: { screen: 'SearchMain' },
+							});
+						} else if (navigation && typeof navigation.navigate === 'function') {
+							navigation.navigate('Søg', { screen: 'SearchMain' });
 						}
 					}}
 				>
@@ -347,6 +470,13 @@ export default function ProductDetailScreen({ route }) {
 					) : (
 						<Typography variant="body" muted style={styles.categoryText}>{product.category}</Typography>
 					)}
+					{productSummary ? (
+						<View style={styles.aiSummaryCard}>
+							<Typography variant="small" style={{ textAlign: 'center' }}>
+								“{productSummary}” - ChatGPT
+							</Typography>
+						</View>
+					) : null}
 				</View>
 
 				{/* Product Info Cards */}
@@ -479,14 +609,21 @@ export default function ProductDetailScreen({ route }) {
 											style={[styles.reviewItem, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}
 										>
 											<View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-												<Typography variant="body" weight="600" style={{ color: theme.colors.text }}>
-													{review.userName || 'Bruger'}
-												</Typography>
-												<View style={{ flexDirection: 'row' }}>
-													{[...Array(review.rating || 0)].map((_, i) => (
-														<Ionicons key={i} name="star" size={14} color="#FFB800" />
-													))}
+												<View>
+													<Typography variant="body" weight="600" style={{ color: theme.colors.text }}>
+														{review.userName || 'Bruger'}
+													</Typography>
+													<View style={{ flexDirection: 'row', marginTop: 2 }}>
+														{[...Array(review.rating || 0)].map((_, i) => (
+															<Ionicons key={i} name="star" size={14} color="#FFB800" />
+														))}
+													</View>
 												</View>
+												{currentUserId && review.userId === currentUserId && (
+													<TouchableOpacity onPress={() => handleDeleteReview(review)}>
+														<Ionicons name="trash" size={18} color={theme.colors.textMuted || '#999'} />
+													</TouchableOpacity>
+												)}
 											</View>
 											{review.text ? (
 												<Typography variant="small" style={{ color: theme.colors.text }}>
@@ -500,15 +637,21 @@ export default function ProductDetailScreen({ route }) {
 
 							{/* Formular til ny anmeldelse */}
 							<View style={{ marginTop: 16 }}>
-								<Typography variant="body" weight="600" style={{ marginBottom: 8, color: theme.colors.text }}>
+								<Typography variant="body" weight="600" style={{ marginBottom: 4, color: theme.colors.text }}>
 									Skriv din egen anmeldelse
 								</Typography>
-								<View style={{ flexDirection: 'row', marginBottom: 8 }}>
+								{!canReview && (
+									<Typography variant="small" muted style={{ marginBottom: 8 }}>
+										Scan produktets stregkode først for at kunne skrive en anmeldelse.
+									</Typography>
+								)}
+								<View style={{ flexDirection: 'row', marginBottom: 8, opacity: canReview ? 1 : 0.3 }}>
 									{[1, 2, 3, 4, 5].map(star => (
 										<TouchableOpacity
 											key={star}
-											onPress={() => setNewRating(star)}
+											onPress={() => canReview && setNewRating(star)}
 											style={{ marginRight: 4 }}
+											disabled={!canReview}
 										>
 											<Ionicons
 												name={star <= newRating ? 'star' : 'star-outline'}
@@ -530,8 +673,10 @@ export default function ProductDetailScreen({ route }) {
 										color: theme.colors.text,
 										minHeight: 60,
 										textAlignVertical: 'top',
+										opacity: canReview ? 1 : 0.4,
 									}}
 									multiline
+									editable={canReview}
 								/>
 								<TouchableOpacity
 									onPress={handleSubmitReview}
@@ -542,9 +687,9 @@ export default function ProductDetailScreen({ route }) {
 										paddingHorizontal: 16,
 										paddingVertical: 8,
 										borderRadius: 8,
-										opacity: submittingReview ? 0.6 : 1,
+										opacity: submittingReview || !canReview ? 0.4 : 1,
 									}}
-									disabled={submittingReview}
+									disabled={submittingReview || !canReview}
 								>
 									<Typography variant="small" weight="600" style={{ color: '#fff' }}>
 										{submittingReview ? 'Gemmer...' : 'Gem anmeldelse'}
