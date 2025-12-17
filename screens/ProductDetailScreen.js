@@ -169,7 +169,7 @@ export default function ProductDetailScreen({ route }) {
 		return () => { mounted = false; };
 	}, [imageUri, product]);
 
-	// Ask AI for a short one-liner summary of the product
+	// Ask AI for a short one-liner summary of the product, tailored to the user's skin type and allergies if available
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
@@ -181,7 +181,20 @@ export default function ProductDetailScreen({ route }) {
 					setProductSummaryLoading(false);
 					return;
 				}
-				const prompt = `Giv en kort, venlig one-liner (maks 25 ord) der beskriver dette hudplejeprodukt til en dansk forbruger. Inkludér gerne hudtype/brugsscenarie hvis det er tydeligt. Produktnavn: "${product.name}". Brand: "${product.brand || ''}". Beskrivelse: "${product.shortDescription || ''}"`;
+
+				const skin = prefs?.skin || null;
+				const allergies = prefs?.allergies || [];
+
+				let userContext = 'Brugeren har ikke angivet hudtype eller allergier.';
+				if (skin && allergies.length) {
+					userContext = `Brugeren har hudtypen "${skin}" og vil undgå disse ingredienser/allergener: ${allergies.join(', ')}.`;
+				} else if (skin) {
+					userContext = `Brugeren har hudtypen "${skin}" og har ikke angivet specifikke allergier.`;
+				} else if (allergies.length) {
+					userContext = `Brugeren har ikke angivet hudtype, men vil undgå disse ingredienser/allergener: ${allergies.join(', ')}.`;
+				}
+
+				const prompt = `Du er en dansk hudplejeekspert. ${userContext} Giv en kort, venlig one-liner (maks 25 ord), der beskriver dette hudplejeprodukt målrettet denne bruger. Fokuser på om produktet sandsynligvis passer til brugerens hudtype og om det ser ud til at undgå deres allergier, hvis muligt. Produktnavn: "${product.name}". Brand: "${product.brand || ''}". Beskrivelse: "${product.shortDescription || ''}"`;
 				const reply = await callOpenAI(prompt, apiKey);
 				if (!cancelled) setProductSummary(reply);
 			} catch (e) {
@@ -193,7 +206,7 @@ export default function ProductDetailScreen({ route }) {
 		return () => {
 			cancelled = true;
 		};
-	}, [product]);
+	}, [product, prefs]);
 
 	// Load user preferences from AsyncStorage for comparison
 	useEffect(() => {
@@ -362,6 +375,8 @@ export default function ProductDetailScreen({ route }) {
 		}
 	};
 
+	const fromTab = route?.params?.fromTab;
+
 	return (
 		<SafeAreaView style={styles.container}>
 			<View style={styles.content}>
@@ -370,6 +385,23 @@ export default function ProductDetailScreen({ route }) {
 				<TouchableOpacity
 					style={styles.backButton}
 					onPress={() => {
+						// Hvis vi kom fra For you-tabben, så gå bare ét skridt tilbage i hovedstacken
+						if (fromTab === 'For you') {
+							try {
+								if (navigation && typeof navigation.goBack === 'function') {
+									navigation.goBack();
+									return;
+								}
+							} catch (e) {
+								// fald igennem til eksisterende logik
+							}
+							// Fallback: skift eksplicit til For you-tabben
+							if (navigationRef.isReady()) {
+								navigationRef.navigate('MainTabs', { screen: 'For you' });
+								return;
+							}
+						}
+
 						// Hvis vi har en historik at gå tilbage i i SearchStack,
 						// så brug goBack (korrekt iOS-swipe fra venstre).
 						// Ellers: gå eksplicit til Søg -> SearchMain via global ref.
@@ -473,7 +505,7 @@ export default function ProductDetailScreen({ route }) {
 					{productSummary ? (
 						<View style={styles.aiSummaryCard}>
 							<Typography variant="small" style={{ textAlign: 'center' }}>
-								“{productSummary}” - ChatGPT
+								{productSummary} - ChatGPT
 							</Typography>
 						</View>
 					) : null}

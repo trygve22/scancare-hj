@@ -28,7 +28,7 @@ export default function CameraScreen({ navigation }) {
       if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
         navigation.goBack();
       } else if (navigation) {
-        navigation.navigate('MainTabs', { screen: 'Hjem' });
+        navigation.navigate('MainTabs', { screen: 'For you' });
       }
     } catch (e) {
       console.warn('Failed to safely close camera screen:', e);
@@ -159,7 +159,7 @@ export default function CameraScreen({ navigation }) {
                     if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
                       navigation.goBack();
                     } else if (navigation) {
-                      navigation.navigate('MainTabs', { screen: 'Hjem' });
+                      navigation.navigate('MainTabs', { screen: 'For you' });
                     }
                   } catch (e) { console.warn('Failed to handle header close:', e); }
                 }} style={styles.headerButton}>

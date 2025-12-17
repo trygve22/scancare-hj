@@ -54,6 +54,8 @@ function MainStack() {
       <Stack.Screen name="Camera" component={CameraScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="History" component={HistoryScreen} />
+      {/* Standalone produktdetalje-route når man kommer fra For you-tabben */}
+      <Stack.Screen name="ProductDetailFromForYou" component={ProductDetailScreen} />
     </Stack.Navigator>
   );
 }
@@ -109,9 +111,9 @@ function MainTabs() {
         },
         tabBarIcon: ({ color, size }) => {
           let iconName = 'home';
-          if (route.name === 'Hjem') iconName = 'home';
+          if (route.name === 'For you') iconName = 'home';
           else if (route.name === 'Søg') iconName = 'search';
-          else if (route.name === 'Favoritter') iconName = 'heart';
+          else if (route.name === 'AI') iconName = 'chatbubble-ellipses';
           else if (route.name === 'Profil') iconName = 'person';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -123,7 +125,7 @@ function MainTabs() {
         tabBarInactiveTintColor: 'rgba(255,255,255,0.75)',
       })}
     >
-      <Tab.Screen name="Hjem" component={HomeScreen} />
+      <Tab.Screen name="For you" component={HomeScreen} />
       <Tab.Screen name="Søg" component={SearchStackScreen} />
 
       {/* Central Scan button: opens the Camera screen */}
@@ -165,7 +167,7 @@ function MainTabs() {
         {() => null}
       </Tab.Screen>
 
-      <Tab.Screen name="Favoritter" component={FavoritesScreen} />
+      <Tab.Screen name="AI" component={ChatScreen} />
       <Tab.Screen name="Profil" component={ProfileScreen} />
     </Tab.Navigator>
   );
