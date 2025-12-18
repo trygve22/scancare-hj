@@ -271,13 +271,14 @@ export default function ProductDetailScreen({ route }) {
 		const productSkinTypes = product.skinTypes || [];
 		const productContains = product.contains || [];
 		const productBrand = product.brand;
+		const effectiveAllergies = (allergies || []).filter(a => a !== 'Ingen præference / i tvivl');
 
 		const matchesSkin = skin && productSkinTypes.length
 			? productSkinTypes.includes(skin)
 			: null;
 
-		const triggersAllergy = allergies && allergies.length
-			? allergies.some(a => productContains.includes(a))
+		const triggersAllergy = effectiveAllergies.length
+			? effectiveAllergies.some(a => productContains.includes(a))
 			: false;
 
 		const avoidsAllergy = allergies && allergies.length

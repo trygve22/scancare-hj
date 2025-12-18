@@ -100,7 +100,7 @@ export default function HomeScreen({ navigation }) {
         );
     }, []);
 
-    // Udregn anbefalede produkter baseret på hudtype og allergier
+    // Udregn anbefalede produkter baseret på hudtype og ingrediens-hensyn
     useEffect(() => {
         if (loadingPrefs) return;
         setLoadingProducts(true);
@@ -109,14 +109,16 @@ export default function HomeScreen({ navigation }) {
             const productSkinTypes = product.skinTypes || [];
             const productContains = product.contains || [];
 
+            const effectiveAllergies = (allergies || []).filter(a => a !== 'Ingen præference / i tvivl');
+
             let okSkin = true;
             if (skin && productSkinTypes.length) {
                 okSkin = productSkinTypes.includes(skin);
             }
 
             let okAllergy = true;
-            if (allergies && allergies.length && productContains.length) {
-                okAllergy = !allergies.some(a => productContains.includes(a));
+            if (effectiveAllergies.length && productContains.length) {
+                okAllergy = !effectiveAllergies.some(a => productContains.includes(a));
             }
 
             return okSkin && okAllergy;
@@ -195,17 +197,6 @@ export default function HomeScreen({ navigation }) {
                 <Image source={require('../assets/logo.png')} style={local.logo} resizeMode="contain" />
             </View>
 
-            <View style={local.quickActionsRow}>
-                <TouchableOpacity style={[local.quickAction, { backgroundColor: theme.colors.primary }]} onPress={() => safeNavigate('Camera')}>
-                    <Ionicons name="scan" size={18} color="#fff" style={{ marginRight: 6 }} />
-                    <Typography variant="small" weight="600" style={{ color: '#fff' }}>Scan produkt</Typography>
-                </TouchableOpacity>
-                <TouchableOpacity style={[local.quickAction, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]} onPress={() => safeNavigate('Profil')}>
-                    <Ionicons name="person-circle-outline" size={18} color={theme.colors.text} style={{ marginRight: 6 }} />
-                    <Typography variant="small" weight="600" style={{ color: theme.colors.text }}>Redigér profil</Typography>
-                </TouchableOpacity>
-            </View>
-
             {/* Liste over anbefalede produkter */}
             <View style={{ flex: 1, width: '100%', marginTop: theme.spacing.lg }}>
                 <Typography variant="h3" style={{ marginBottom: theme.spacing.sm, color: theme.colors.text }}>
@@ -282,23 +273,6 @@ const local = StyleSheet.create({
     secondaryButton: { backgroundColor: '#fff', paddingVertical: 12, paddingHorizontal: 36, borderRadius: 8 },
     secondaryButtonText: { fontSize: 16 },
     toggleButton: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8, borderWidth: 1 },
-    quickActionsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        width: '100%',
-        marginTop: 8,
-        gap: 8,
-    },
-    quickAction: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderRadius: 999,
-        borderWidth: 1,
-    },
     productCard: {
         alignItems: 'center',
         justifyContent: 'center',

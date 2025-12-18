@@ -10,9 +10,30 @@ import brandLogos from '../data/brandLogos';
 const SKIN_KEY = 'SC_PROFILE_SKIN';
 const ALLERGY_KEY = 'SC_PROFILE_ALLERGIES';
 const BRAND_KEY = 'SC_PROFILE_BRAND';
+const FOCUS_KEY = 'SC_PROFILE_FOCUS_AREAS';
 
-const SKIN_TYPES = ['Normal', 'Tør', 'Fedt', 'Kombineret', 'Følsom'];
-const ALLERGIES = ['Parfume', 'Parabener', 'Sulfater', 'Lanolin', 'Nikkel'];
+// Din hudtype (vælg én)
+const SKIN_TYPES = ['Tør', 'Fedtet', 'Kombineret', 'Sensitiv', 'Normal'];
+
+// Ingrediens-hensyn (vælg flere)
+const INGREDIENT_OPTIONS = [
+  'Parfume',
+  'Alkohol',
+  'Æteriske olier',
+  'Parabener',
+  'Ingen præference / i tvivl',
+];
+
+const NO_INGREDIENT_PREFERENCE = 'Ingen præference / i tvivl';
+
+// Fokusområder (vælg op til 2)
+const FOCUS_OPTIONS = [
+  'Mere fugt',
+  'Akne',
+  'Rødme / irritation',
+  'Anti-age',
+  'Ujævn hudtone',
+];
 
 export default function ProfileScreen({ navigation }) {
   const { theme, mode, toggleTheme } = useTheme();
@@ -22,42 +43,80 @@ export default function ProfileScreen({ navigation }) {
   const [skin, setSkin] = useState(null);
   const [allergies, setAllergies] = useState([]);
   const [brand, setBrand] = useState(null);
+  const [focusAreas, setFocusAreas] = useState([]);
+  const [prefsHydrated, setPrefsHydrated] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
     (async () => {
-      const u = await getCurrentUser();
-      setUser(u);
-
       try {
+        const u = await getCurrentUser();
+        if (mounted) setUser(u);
+
         const s = await AsyncStorage.getItem(SKIN_KEY);
         const a = await AsyncStorage.getItem(ALLERGY_KEY);
         const b = await AsyncStorage.getItem(BRAND_KEY);
+        const f = await AsyncStorage.getItem(FOCUS_KEY);
+        if (!mounted) return;
         if (s) setSkin(s);
         if (a) setAllergies(JSON.parse(a));
         if (b) setBrand(b);
+        if (f) setFocusAreas(JSON.parse(f));
       } catch (err) {
         console.warn('Failed loading profile prefs', err);
+      } finally {
+        if (mounted) setPrefsHydrated(true);
       }
     })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const toggleAllergy = (item) => {
+  const toggleAvoidPreference = (item) => {
     setAllergies(prev => {
-      if (prev.includes(item)) return prev.filter(x => x !== item);
-      return [...prev, item];
+      // Håndtér "Ingen præference / i tvivl" som en gensidig udelukkende mulighed
+      if (item === NO_INGREDIENT_PREFERENCE) {
+        return prev.includes(NO_INGREDIENT_PREFERENCE) ? [] : [NO_INGREDIENT_PREFERENCE];
+      }
+
+      const withoutNoPref = prev.filter(x => x !== NO_INGREDIENT_PREFERENCE);
+      if (withoutNoPref.includes(item)) {
+        return withoutNoPref.filter(x => x !== item);
+      }
+      return [...withoutNoPref, item];
     });
   };
 
-  const savePreferences = async () => {
-    try {
-      await AsyncStorage.setItem(SKIN_KEY, skin || '');
-      await AsyncStorage.setItem(ALLERGY_KEY, JSON.stringify(allergies || []));
-      await AsyncStorage.setItem(BRAND_KEY, brand || '');
-      Alert.alert('Gemte indstillinger', 'Dine præferencer er gemt');
-    } catch (err) {
-      console.error('Save profile prefs failed', err);
-      Alert.alert('Fejl', 'Kunne ikke gemme præferencer');
-    }
+  const toggleHelpTopic = (topic) => {
+    setFocusAreas(prev => {
+      if (prev.includes(topic)) {
+        return prev.filter(x => x !== topic);
+      }
+      if (prev.length >= 2) {
+        return prev;
+      }
+      return [...prev, topic];
+    });
+  };
+
+  // Gem præferencer automatisk, når de ændrer sig
+  useEffect(() => {
+    if (!prefsHydrated) return;
+    (async () => {
+      try {
+        await AsyncStorage.setItem(SKIN_KEY, skin || '');
+        await AsyncStorage.setItem(ALLERGY_KEY, JSON.stringify(allergies || []));
+        await AsyncStorage.setItem(BRAND_KEY, brand || '');
+        await AsyncStorage.setItem(FOCUS_KEY, JSON.stringify(focusAreas || []));
+      } catch (err) {
+        console.warn('Save profile prefs failed', err);
+      }
+    })();
+  }, [skin, allergies, brand, focusAreas, prefsHydrated]);
+
+  const savePreferences = () => {
+    Alert.alert('Gemte indstillinger', 'Dine præferencer bliver gemt automatisk.');
   };
 
   const handleLogout = async () => {
@@ -80,7 +139,7 @@ export default function ProfileScreen({ navigation }) {
           <Typography variant="small" muted style={{ marginTop: 6 }}>{user.email}</Typography>
 
           <View style={styles.section}>
-            <Typography variant="h3">Hudtype</Typography>
+            <Typography variant="h3">Din hudtype</Typography>
             <View style={styles.row}>
               {SKIN_TYPES.map((s) => (
                 <TouchableOpacity
@@ -95,18 +154,73 @@ export default function ProfileScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
-            <Typography variant="h3">Allergier</Typography>
+            <Typography variant="h3">Undgå helst</Typography>
+            <Typography variant="small" muted style={{ marginTop: 4 }}>
+              Vælg de ting du helst vil undgå i produkter (hvis du er i tvivl, vælg 'Ingen præference').
+            </Typography>
             <View style={styles.rowWrap}>
-              {ALLERGIES.map((a) => (
-                <TouchableOpacity
-                  key={a}
-                  onPress={() => toggleAllergy(a)}
-                  style={[styles.checkbox, allergies.includes(a) && { borderColor: theme.colors.primary, backgroundColor: allergies.includes(a) ? 'rgba(31,190,149,0.12)' : 'transparent' }]}
-                >
-                  <Typography variant="small">{a}</Typography>
-                </TouchableOpacity>
-              ))}
+              {INGREDIENT_OPTIONS.map((a) => {
+                const selected = allergies.includes(a);
+                return (
+                  <TouchableOpacity
+                    key={a}
+                    onPress={() => toggleAvoidPreference(a)}
+                    style={[
+                      styles.checkbox,
+                      selected && {
+                        borderColor: theme.colors.primary,
+                        backgroundColor: 'rgba(31,190,149,0.12)',
+                      },
+                    ]}
+                  >
+                    <Typography variant="small">{a}</Typography>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Typography variant="h3">Hvad vil du gerne have hjælp til?</Typography>
+              <Typography variant="small" muted style={{ marginLeft: 8 }}>
+                ({focusAreas.length}/2 valgt)
+              </Typography>
+            </View>
+            <Typography variant="small" muted style={{ marginTop: 4 }}>
+              Vælg op til 2 områder, så appen kan give mere relevante anbefalinger.
+            </Typography>
+            <View style={styles.rowWrap}>
+              {FOCUS_OPTIONS.map((f) => {
+                const selected = focusAreas.includes(f);
+                const atLimit = !selected && focusAreas.length >= 2;
+                return (
+                  <TouchableOpacity
+                    key={f}
+                    onPress={() => {
+                      if (atLimit) return;
+                      toggleHelpTopic(f);
+                    }}
+                    disabled={atLimit}
+                    style={[
+                      styles.checkbox,
+                      atLimit && !selected && styles.checkboxDisabled,
+                      selected && {
+                        borderColor: theme.colors.primary,
+                        backgroundColor: 'rgba(31,190,149,0.12)',
+                      },
+                    ]}
+                  >
+                    <Typography variant="small">{f}</Typography>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {focusAreas.length >= 2 && (
+              <Typography variant="small" muted style={{ marginTop: 6 }}>
+                Du kan maks vælge 2.
+              </Typography>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -180,6 +294,10 @@ const makeLocalStyles = (theme) => StyleSheet.create({
     marginTop: 20,
     width: '100%'
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   row: { flexDirection: 'row', marginTop: 12, gap: 8, flexWrap: 'wrap' },
   rowWrap: { flexDirection: 'row', marginTop: 12, gap: 8, flexWrap: 'wrap' },
   chip: {
@@ -196,6 +314,9 @@ const makeLocalStyles = (theme) => StyleSheet.create({
     borderColor: '#ddd',
     backgroundColor: 'transparent',
     marginBottom: 8
+  },
+  checkboxDisabled: {
+    opacity: 0.6,
   },
   brandRow: { flexDirection: 'row', marginTop: 12, gap: 12 },
   brandItem: { alignItems: 'center', padding: 8, borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
